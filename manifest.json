@@ -1,0 +1,38 @@
+{
+   "action": {
+      "default_title": "__MSG_extension_name__",
+      "default_popup": "popup.html"
+   },
+   "background": {
+      "service_worker": "background.js"
+   },
+   "content_scripts": [ {
+      "js": [ "contentScript.js" ],
+      "matches": [ "https://suno.com/*" ]
+   }],
+   "default_locale": "en",
+   "description": "__MSG_extension_description__",
+   "host_permissions": [ "https://suno.com/*" ],
+   "permissions": [
+      "activeTab",
+      "tabs",
+      "cookies",
+      "downloads" 
+   ],
+   "icons": {
+      "128": "public/icon128.png",
+      "16": "public/icon16.png",
+      "32": "public/icon32.png",
+      "48": "public/icon48.png"
+   },
+   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArIgFBZn0oi5svbrYHgzQUsbZUMK6vBhj/uUglijd4ZA0ub+caLvQ9hmc3AGpRNmKFmIvqLyAQxiWcobXLJw5XIk0COTZAlZU38Baq1KbcX8XIMa6GEdO9+qCrKaYVEEgw7sxSoemIMAB5o0zHHk0d9Oh8ak5IfXiUXTQPh77x4XyiZKarZOxdIkRZe+QVH8RkTf9s8VRz315tZP2LTqR5z+84jNx36kfhXxRMvrG10Z5NonKVMeN36xHLUebBMKIAExTnZtG+TkEragrNdMCwhG0MB+LBHaoEQwg0fUmy3sYwht+2q7aAb67L1VTtive9PkdeMY42MfLxYVMemylFQIDAQAB",
+   "manifest_version": 3,
+   "minimum_chrome_version": "114",
+   "name": "__MSG_extension_name__",
+   "update_url": "https://clients2.google.com/service/update2/crx",
+   "version": "1.0.3",
+   "web_accessible_resources": [{
+      "resources": ["popup.html", "popup.js"],
+      "matches": ["<all_urls>"]
+   }]
+}

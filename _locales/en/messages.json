@@ -1,0 +1,71 @@
+{
+  "extension_name": {
+    "message": "Suno Lyrics Downloader"
+  },
+  "extension_description": {
+    "message": "Download lyrics and MP3 files from Suno songs"
+  },
+  "title": {
+    "message": "LRC to Lyric Video Converter 🎤"
+  },
+  "subtitle": {
+    "message": "LRC content loaded automatically and can be edited"
+  },
+  "remove_punctuation": {
+    "message": "Remove punctuation (- , ?)"
+  },
+  "remove_adlibs": {
+    "message": "Remove adlibs (content in brackets)"
+  },
+  "remove_meta_tags": {
+    "message": "Remove meta tags"
+  },
+  "to_upper": {
+    "message": "UPPERCASE"
+  },
+  "to_lower": {
+    "message": "lowercase"
+  },
+  "copy_clipboard": {
+    "message": "Copy to Clipboard"
+  },
+  "download_file": {
+    "message": "Download File"
+  },
+  "close": {
+    "message": "Close"
+  },
+  "download_mp3": {
+    "message": "Download MP3"
+  },
+  "error_loading": {
+    "message": "Error loading LRC data. Please reload the page."
+  },
+  "no_content": {
+    "message": "No LRC content available."
+  },
+  "open_song_page": {
+    "message": "Please open a Suno song page."
+  },
+  "status_loaded": {
+    "message": "LRC loaded!"
+  },
+  "status_copied": {
+    "message": "Copied!"
+  },
+  "status_downloaded": {
+    "message": "File downloaded!"
+  },
+  "status_mp3_started": {
+    "message": "MP3 download started!"
+  },
+  "status_error": {
+    "message": "Error"
+  },
+  "status_nothing": {
+    "message": "Nothing to copy!"
+  },
+  "placeholder": {
+    "message": "Processing LRC content..."
+  }
+}

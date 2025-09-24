@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suno Lyrics Downloader</title>
+    <style>
+        :root {
+            --bg-primary: #0f0f15;
+            --bg-secondary: #1a1a24;
+            --bg-tertiary: #25253a;
+            --accent-primary: #6b5bff;
+            --accent-secondary: #8b7bff;
+            --accent-success: #4ade80;
+            --accent-error: #f87171;
+            --accent-warning: #fbbf24;
+            --text-primary: #f0f0f5;
+            --text-secondary: #a8a8b8;
+            --text-muted: #6b6b7b;
+            --border-color: #2a2a3e;
+            --shadow-glow: 0 0 20px rgba(107, 91, 255, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            width: 650px;
+            height: 680px; /* Increased height */
+            overflow: hidden !important;
+        }
+        
+        body {
+            width: 650px;
+            height: 680px; /* Increased height */
+            overflow: hidden !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            color: var(--text-primary);
+            padding: 0;
+            margin: 0;
+            position: relative;
+        }
+
+        /* Animated background gradient */
+        .bg-animation {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 650px;
+            height: 680px;
+            background: radial-gradient(circle at center, rgba(107, 91, 255, 0.1) 0%, transparent 70%);
+            animation: pulse 15s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes pulse {
+            0%, 100% { 
+                transform: scale(1) rotate(0deg);
+                opacity: 0.5;
+            }
+            50% { 
+                transform: scale(1.2) rotate(180deg);
+                opacity: 0.8;
+            }
+        }
+
+        .container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 650px;
+            height: 680px; /* Increased height */
+            padding: 20px;
+            background: rgba(26, 26, 36, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden !important;
+            z-index: 1;
+        }
+
+        /* Language Switcher */
+        .language-switcher {
+            position: absolute;
+            top: 12px;
+            right: 20px;
+            display: flex;
+            gap: 4px;
+            background: var(--bg-tertiary);
+            border-radius: 18px;
+            padding: 3px;
+            border: 1px solid var(--border-color);
+            z-index: 10;
+        }
+
+        .lang-btn {
+            padding: 5px 10px;
+            background: transparent;
+            color: var(--text-secondary);
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        .lang-btn.active {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .lang-btn:hover:not(.active) {
+            color: var(--text-primary);
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+            padding-top: 5px;
+        }
+
+        h1 {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 4px;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 400;
+        }
+
+        /* Options Grid */
+        .options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .option-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 10px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+
+        .option-item:hover {
+            background: rgba(107, 91, 255, 0.1);
+            border-color: var(--accent-primary);
+        }
+
+        .option-item input[type="checkbox"] {
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--border-color);
+            border-radius: 3px;
+            margin-right: 8px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .option-item input[type="checkbox"]:checked {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .option-item input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .option-item label {
+            color: var(--text-primary);
+            font-size: 11px;
+            cursor: pointer;
+            user-select: none;
+            flex: 1;
+        }
+
+        /* Textarea Container */
+        .textarea-wrapper {
+            flex: 1;
+            min-height: 200px;
+            max-height: 280px;
+            margin-bottom: 12px;
+            position: relative;
+        }
+
+        /* Textarea */
+        textarea {
+            width: 100%;
+            height: 100%;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 10px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            resize: none;
+            transition: border-color 0.3s ease;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* Custom scrollbar for textarea */
+        textarea::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        textarea::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+            border-radius: 3px;
+        }
+
+        textarea::-webkit-scrollbar-thumb {
+            background: var(--accent-primary);
+            border-radius: 3px;
+        }
+
+        textarea::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-secondary);
+        }
+
+        /* Status Message */
+        .status {
+            height: 0;
+            margin: 0;
+            padding: 0;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 500;
+            display: none;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .status.show {
+            display: block;
+            height: auto;
+            margin-bottom: 10px;
+            padding: 8px 12px;
+        }
+
+        .status.success {
+            background: rgba(74, 222, 128, 0.1);
+            color: var(--accent-success);
+            border: 1px solid rgba(74, 222, 128, 0.2);
+        }
+
+        .status.error {
+            background: rgba(248, 113, 113, 0.1);
+            color: var(--accent-error);
+            border: 1px solid rgba(248, 113, 113, 0.2);
+        }
+
+        .status.info {
+            background: rgba(251, 191, 36, 0.1);
+            color: var(--accent-warning);
+            border: 1px solid rgba(251, 191, 36, 0.2);
+        }
+
+        /* Buttons Container */
+        .buttons-container {
+            margin-top: auto; /* Push to bottom */
+        }
+
+        /* Buttons */
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        button {
+            padding: 9px 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            position: relative;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        button:hover {
+            opacity: 0.85;
+        }
+
+        button:active {
+            opacity: 0.7;
+        }
+
+        #copyButton {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        #downloadButton {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            color: white;
+        }
+
+        #closeButton {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        #closeButton:hover {
+            background: rgba(248, 113, 113, 0.1);
+            color: var(--accent-error);
+            border-color: var(--accent-error);
+        }
+
+        #downloadMp3Button {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, var(--accent-success), #22d3ee);
+            color: white;
+            font-size: 13px;
+            padding: 11px;
+        }
+
+        #downloadMp3Button:disabled {
+            background: var(--bg-tertiary);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        button .icon {
+            font-size: 13px;
+        }
+
+        /* Ensure no scrollbars anywhere */
+        ::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+        }
+        
+        /* Only show scrollbar in textarea */
+        textarea::-webkit-scrollbar {
+            width: 6px;
+        }
+    </style>
+</head>
+<body>
+<div class="bg-animation"></div>
+<div class="container">
+    <div class="language-switcher">
+        <button class="lang-btn active" data-lang="de">DE</button>
+        <button class="lang-btn" data-lang="en">EN</button>
+    </div>
+
+    <div class="header">
+        <h1 data-i18n="title">LRC zu Lyric Video Konverter 🎤</h1>
+        <p class="subtitle" data-i18n="subtitle">LRC-Inhalt wurde automatisch geladen und kann bearbeitet werden</p>
+    </div>
+
+    <div class="options">
+        <div class="option-item">
+            <input type="checkbox" id="removePunct">
+            <label for="removePunct" data-i18n="remove_punctuation">Satzzeichen löschen (- , ?)</label>
+        </div>
+        <div class="option-item">
+            <input type="checkbox" id="removeAdlibs">
+            <label for="removeAdlibs" data-i18n="remove_adlibs">Adlibs entfernen (alles in Klammern)</label>
+        </div>
+        <div class="option-item">
+            <input type="checkbox" id="removeMetaTags">
+            <label for="removeMetaTags" data-i18n="remove_meta_tags">Meta-Tags entfernen</label>
+        </div>
+        <div class="option-item">
+            <input type="checkbox" id="toUpper">
+            <label for="toUpper" data-i18n="to_upper">ALLES GROSS</label>
+        </div>
+        <div class="option-item">
+            <input type="checkbox" id="toLower">
+            <label for="toLower" data-i18n="to_lower">alles klein</label>
+        </div>
+    </div>
+
+    <div class="textarea-wrapper">
+        <textarea id="output" data-i18n-placeholder="placeholder" placeholder="Verarbeite LRC-Inhalt..."></textarea>
+    </div>
+
+    <div class="status" id="statusMessage"></div>
+
+    <div class="buttons-container">
+        <div class="button-group">
+            <button id="copyButton">
+                <span class="icon">📋</span>
+                <span data-i18n="copy_clipboard">Kopieren</span>
+            </button>
+            <button id="downloadButton">
+                <span class="icon">💾</span>
+                <span data-i18n="download_file">Download</span>
+            </button>
+            <button id="closeButton">
+                <span class="icon">❌</span>
+                <span data-i18n="close">Schließen</span>
+            </button>
+            <button id="downloadMp3Button" disabled>
+                <span class="icon">🎵</span>
+                <span data-i18n="download_mp3">MP3 herunterladen</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="popup.js"></script>
+
+</body>
+</html>
