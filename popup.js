@@ -7,52 +7,50 @@ var currentLang = 'de'; // Default language
 // Language strings
 var i18n = {
 de: {
-title: "LRC zu Lyric Video Konverter 🎤",
-subtitle: "LRC-Inhalt wurde automatisch geladen und kann bearbeitet werden",
-remove_punctuation: "Satzzeichen löschen (- , ?)",
-remove_adlibs: "Adlibs entfernen (alles in Klammern)",
+title: "Fightclub SUNO Tool 🎤",
+subtitle: "Welcome to the Fighclub!",
+remove_punctuation: "Satzzeichen entfernen",
+remove_adlibs: "Adlibs entfernen",
 to_upper: "ALLES GROSS",
 to_lower: "alles klein",
-copy_clipboard: "In Zwischenablage kopieren",
-download_file: "Datei herunterladen",
-close: "Schließen",
+copy_clipboard: "Lyrics kopieren",
+download_file: "Lyrics herunterladen",
 download_mp3: "Audio",
 download_cover: "Cover",
 download_video: "Video",
-error_loading: "Fehler beim Laden der LRC-Daten. Bitte die Seite neu laden.",
-no_content: "Kein LRC-Inhalt verfügbar.",
-open_song_page: "Bitte öffne eine Suno Song-Seite.",
-status_loaded: "LRC geladen!",
+error_loading: "Fehler beim Laden der Daten. Bitte die Seite neu laden.",
+no_content: "Kein Inhalt verfügbar.",
+open_song_page: "Kein Song gefunden. Bitte öffne eine Suno Song-Seite.",
+status_loaded: "Lyrics geladen!",
 status_copied: "Kopiert!",
 status_downloaded: "Datei heruntergeladen!",
 status_mp3_started: "MP3 Download gestartet!",
 status_error: "Fehler",
 status_nothing: "Nichts zu kopieren!",
-placeholder: "Verarbeite LRC-Inhalt..."
+placeholder: "Lade Lyrics, Hurensohn!"
 },
 en: {
-title: "LRC to Lyric Video Converter 🎤",
-subtitle: "LRC content loaded automatically and can be edited",
-remove_punctuation: "Remove punctuation (- , ?)",
-remove_adlibs: "Remove adlibs (content in brackets)",
+title: "Fightclub SUNO Tool 🎤",
+subtitle: "Welcome to the Fighclub!",
+remove_punctuation: "Remove punctuation",
+remove_adlibs: "Remove adlibs",
 to_upper: "UPPERCASE",
 to_lower: "lowercase",
-copy_clipboard: "Copy to Clipboard",
-download_file: "Download File",
-close: "Close",
+copy_clipboard: "Copy Lyrics",
+download_file: "Download Lyrics",
 download_mp3: "Audio",
 download_cover: "Cover",
 download_video: "Video",
-error_loading: "Error loading LRC data. Please reload the page.",
-no_content: "No LRC content available.",
-open_song_page: "Please open a Suno song page.",
-status_loaded: "LRC loaded!",
-status_copied: "Copied!",
-status_downloaded: "File downloaded!",
+error_loading: "Error loading data. Please reload the page.",
+no_content: "No content available.",
+open_song_page: "No Song found. Please open a Suno song page.",
+status_loaded: "Lyrics loaded",
+status_copied: "Lyrics copied",
+status_downloaded: "File downloaded",
 status_mp3_started: "MP3 download started!",
 status_error: "Error",
 status_nothing: "Nothing to copy!",
-placeholder: "Processing LRC content..."
+placeholder: "Processing Lyrics, bitch!"
 }
 };
 
@@ -476,11 +474,11 @@ function downloadVideo() {
 
 // Function to show status
 function showStatus(message, type) {
-var statusDiv = document.getElementById('statusMessage');
-statusDiv.textContent = message;
-statusDiv.className = 'status ' + type;
-statusDiv.style.display = 'block';
-setTimeout(function() {
-    statusDiv.style.display = 'none';
-}, 3000);
+    var statusDiv = document.getElementById('statusMessage');
+    if (!statusDiv) return;
+
+    // Set message and class (type can be 'success', 'error', 'info', etc.)
+    statusDiv.textContent = message || '';
+    // apply the variant class (e.g. 'success', 'error') so colors update
+    statusDiv.className = 'status ' + (type || '');
 }
