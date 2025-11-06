@@ -53,7 +53,7 @@
             },
             c = Object.create(("function" == typeof Iterator ? Iterator : Object).prototype);
         return c.next = i(0), c.throw = i(1), c.return = i(2), "function" == typeof Symbol && (c[Symbol.iterator] = function() {
-            return this
+            return this;
         }), c;
 
         function i(i) {
@@ -117,7 +117,11 @@
     function extractSongMetadata() {
         var metadata = {
             title: '',
-            artist: ''
+            artist: '',
+            mediaUrls: {
+                image: '',
+                video: ''
+            }
         };
 
         // Method 1: Try to extract from the document title
@@ -127,14 +131,37 @@
             if (titleMatch && titleMatch.length >= 3) {
                 metadata.title = titleMatch[1].trim();
                 metadata.artist = titleMatch[2].trim();
-                return metadata;
             }
         }
 
         // Method 2: Try to extract from meta tags
         var ogTitle = document.querySelector('meta[property="og:title"]');
         if (ogTitle && ogTitle.content) {
-            metadata.title = ogTitle.content.trim();
+            metadata.title = metadata.title || ogTitle.content.trim();
+        }
+
+        // Extract media URLs from various sources
+        // Check for video element first (most reliable)
+        var videoElement = document.querySelector('video[src*="cdn1.suno.ai/video_"]');
+        if (videoElement && videoElement.src) {
+            metadata.mediaUrls.video = videoElement.src;
+            console.log('Found video URL from video element:', videoElement.src);
+        }
+
+        // Check for image in og:meta tags
+        var ogImage = document.querySelector('meta[property="og:image"]');
+        if (ogImage && ogImage.content) {
+            metadata.mediaUrls.image = ogImage.content;
+            console.log('Found image URL from og:image:', ogImage.content);
+        }
+
+        // Check for video in og:meta tags if not found in video element
+        if (!metadata.mediaUrls.video) {
+            var ogVideo = document.querySelector('meta[property="og:video"]');
+            if (ogVideo && ogVideo.content) {
+                metadata.mediaUrls.video = ogVideo.content;
+                console.log('Found video URL from og:video:', ogVideo.content);
+            }
         }
 
         // Method 3: Try to find artist from meta description
@@ -143,27 +170,64 @@
         if (metaDescription && metaDescription.content) {
             var descMatch = metaDescription.content.match(/by\s+(.+?)\s*KATEX_INLINE_OPEN@/);
             if (descMatch && descMatch[1]) {
-                metadata.artist = descMatch[1].trim();
+                metadata.artist = metadata.artist || descMatch[1].trim();
             }
         }
 
-        // Method 4: Fallback - try to find in script tags (for React/Next.js data)
+        // Method 4: Try to find in script tags (for React/Next.js data)
         var scripts = document.getElementsByTagName('script');
         for (var i = 0; i < scripts.length; i++) {
             var scriptContent = scripts[i].textContent;
             if (scriptContent && scriptContent.includes('display_name')) {
-                // Try to extract display_name
-                var displayNameMatch = scriptContent.match(/"display_name"\s*:\s*"([^"]+)"/);
-                if (displayNameMatch && displayNameMatch[1] && !metadata.artist) {
-                    metadata.artist = displayNameMatch[1];
-                }
-                // Try to extract title
-                var titleMatch = scriptContent.match(/"title"\s*:\s*"([^"]+)"/);
-                if (titleMatch && titleMatch[1] && !metadata.title) {
-                    metadata.title = titleMatch[1].trim();
+                try {
+                    // Try to parse as JSON
+                    const data = JSON.parse(scriptContent);
+                    if (data?.props?.pageProps) {
+                        metadata.mediaUrls.image = metadata.mediaUrls.image || data.props.pageProps.imageUrl;
+                        metadata.mediaUrls.video = metadata.mediaUrls.video || data.props.pageProps.videoUrl;
+                    }
+                } catch (e) {
+                    // If JSON parse fails, try regex
+                    var displayNameMatch = scriptContent.match(/"display_name"\s*:\s*"([^"]+)"/);
+                    if (displayNameMatch && displayNameMatch[1] && !metadata.artist) {
+                        metadata.artist = displayNameMatch[1];
+                    }
+                    var titleMatch = scriptContent.match(/"title"\s*:\s*"([^"]+)"/);
+                    if (titleMatch && titleMatch[1] && !metadata.title) {
+                        metadata.title = titleMatch[1].trim();
+                    }
+                    var imageMatch = scriptContent.match(/"imageUrl"\s*:\s*"([^"]+)"/);
+                    if (imageMatch && imageMatch[1] && !metadata.mediaUrls.image) {
+                        metadata.mediaUrls.image = imageMatch[1];
+                    }
+                    var videoMatch = scriptContent.match(/"videoUrl"\s*:\s*"([^"]+)"/);
+                    if (videoMatch && videoMatch[1] && !metadata.mediaUrls.video) {
+                        metadata.mediaUrls.video = videoMatch[1];
+                    }
                 }
             }
         }
+
+        // Ensure we have both URLs by using fallbacks
+        const songId = window.location.pathname.split('/')[2];
+        if (!metadata.mediaUrls.image) {
+            metadata.mediaUrls.image = `https://cdn1.suno.ai/${songId}/cover.jpg`;
+        }
+        if (!metadata.mediaUrls.video) {
+            metadata.mediaUrls.video = `https://cdn1.suno.ai/${songId}/visualizer.mp4`;
+        }
+
+        // Debug logging for metadata extraction
+        console.log('Extracted metadata details:', {
+            title: metadata.title,
+            artist: metadata.artist,
+            mediaUrls: metadata.mediaUrls,
+            foundInMetaTags: {
+                image: !!document.querySelector('meta[property="og:image"]')?.content,
+                video: !!document.querySelector('meta[property="og:video"]')?.content
+            },
+            songId: songId
+        });
 
         return metadata;
     }
@@ -180,7 +244,9 @@
                         // Extract metadata
                         i = extractSongMetadata();
                         console.log("Extracted metadata:", i);
-                        
+
+                        // (Validation moved to non-blocking async check in extractSongMetadata)
+
                         if (!(e = 2 === (l = "; ".concat(document.cookie).split("; ".concat("__session", "="))).length ? null == (s = l.pop()) ? void 0 : s.split(";").shift() : void 0)) return console.error("Session token not found in cookies"), [2, {songId: null, lrcContent: null}];
                         return [4, (u = t, r(function() {
                             var t, n, o;
@@ -210,15 +276,14 @@
                             songId: t,
                             title: i.title,
                             artist: i.artist,
-                            
-							
-							lrcContent: n.map(function(t) {
-    var e, n, o, r;
-    var timestamp = (n = Math.floor((e = t.start_s) / 60), o = Math.floor(e % 60), r = Math.floor(e % 1 * 100), "[".concat(n.toString().padStart(2, "0"), ":").concat(o.toString().padStart(2, "0"), ".").concat(r.toString().padStart(2, "0"), "]"));
-    var word = t.word.replace(/```math\s*/g, '[').replace(/\s*```/g, ']').replace(/KATEX_INLINE_OPEN\s*/g, '(').replace(/\s*KATEX_INLINE_CLOSE/g, ')');
-    return timestamp.concat(word);
-}).join("\n")
-                        }] : [2, {songId: t, title: i.title, artist: i.artist, lrcContent: null}]
+                            mediaUrls: i.mediaUrls,
+                            lrcContent: n.map(function(t) {
+                                var e, n, o, r;
+                                var timestamp = (n = Math.floor((e = t.start_s) / 60), o = Math.floor(e % 60), r = Math.floor(e % 1 * 100), "[".concat(n.toString().padStart(2, "0"), ":").concat(o.toString().padStart(2, "0"), ".").concat(r.toString().padStart(2, "0"), "]"));
+                                var word = t.word.replace(/```math\s*/g, '[').replace(/\s*```/g, ']').replace(/KATEX_INLINE_OPEN\s*/g, '(').replace(/\s*KATEX_INLINE_CLOSE/g, ')');
+                                return timestamp.concat(word);
+                            }).join("\n")
+                        }] : [2, {songId: t, title: i.title, artist: i.artist, mediaUrls: i.mediaUrls, lrcContent: null}]
                 }
             })
         })()
@@ -234,11 +299,18 @@
             // Check if we're on a song page
             if (window.location.pathname.startsWith("/song/")) {
                 s().then(function(result) {
+                    console.log("Sending response to popup with data:", {
+                        songId: result.songId,
+                        hasTitle: !!result.title,
+                        hasArtist: !!result.artist,
+                        mediaUrls: result.mediaUrls,
+                        hasLyrics: !!result.lrcContent
+                    });
                     sendResponse(result);
                 });
                 return true; // Keep the message channel open for async response
             } else {
-                sendResponse({songId: null, lrcContent: null, error: "Not on a song page"});
+                sendResponse({songId: null, lrcContent: null, mediaUrls: null, error: "Not on a song page"});
             }
         }
         

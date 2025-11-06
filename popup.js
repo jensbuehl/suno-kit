@@ -11,13 +11,14 @@ title: "LRC zu Lyric Video Konverter 🎤",
 subtitle: "LRC-Inhalt wurde automatisch geladen und kann bearbeitet werden",
 remove_punctuation: "Satzzeichen löschen (- , ?)",
 remove_adlibs: "Adlibs entfernen (alles in Klammern)",
-remove_meta_tags: "Meta-Tags entfernen",
 to_upper: "ALLES GROSS",
 to_lower: "alles klein",
 copy_clipboard: "In Zwischenablage kopieren",
 download_file: "Datei herunterladen",
 close: "Schließen",
-download_mp3: "MP3 herunterladen",
+download_mp3: "Audio",
+download_cover: "Cover",
+download_video: "Video",
 error_loading: "Fehler beim Laden der LRC-Daten. Bitte die Seite neu laden.",
 no_content: "Kein LRC-Inhalt verfügbar.",
 open_song_page: "Bitte öffne eine Suno Song-Seite.",
@@ -34,13 +35,14 @@ title: "LRC to Lyric Video Converter 🎤",
 subtitle: "LRC content loaded automatically and can be edited",
 remove_punctuation: "Remove punctuation (- , ?)",
 remove_adlibs: "Remove adlibs (content in brackets)",
-remove_meta_tags: "Remove meta tags",
 to_upper: "UPPERCASE",
 to_lower: "lowercase",
 copy_clipboard: "Copy to Clipboard",
 download_file: "Download File",
 close: "Close",
-download_mp3: "Download MP3",
+download_mp3: "Audio",
+download_cover: "Cover",
+download_video: "Video",
 error_loading: "Error loading LRC data. Please reload the page.",
 no_content: "No LRC content available.",
 open_song_page: "Please open a Suno song page.",
@@ -120,19 +122,48 @@ document.querySelectorAll('.lang-btn').forEach(function(btn) {
 // Button event listeners
 document.getElementById('copyButton').addEventListener('click', copyToClipboard);
 document.getElementById('downloadButton').addEventListener('click', downloadResult);
-document.getElementById('closeButton').addEventListener('click', function() { window.close(); });
+// Close button removed
 document.getElementById('downloadMp3Button').addEventListener('click', downloadMp3);
+document.getElementById('downloadCoverButton').addEventListener('click', downloadCover);
+document.getElementById('downloadVideoButton').addEventListener('click', downloadVideo);
 
-// Checkbox event listeners
-var checkboxIds = ['removePunct','removeAdlibs','removeMetaTags','toUpper','toLower'];
-for (var i = 0; i < checkboxIds.length; i++) {
-    document.getElementById(checkboxIds[i]).addEventListener('change', function() {
-        if (originalLrcContent) {
-            var convertedText = convertLrc(originalLrcContent);
-            document.getElementById('output').value = convertedText;
+// Option button event listeners
+var optionIds = ['removePunct', 'removeAdlibs', 'toUpper', 'toLower'];
+optionIds.forEach(function(id) {
+    var button = document.getElementById(id);
+    if (button) {
+        button.addEventListener('click', function() {
+            // Toggle the active state
+            var currentState = this.getAttribute('data-active') === 'true';
+            this.setAttribute('data-active', !currentState);
+            
+            // Update the text if we have content
+            if (originalLrcContent) {
+                var convertedText = convertLrc(originalLrcContent);
+                document.getElementById('output').value = convertedText;
+            }
+        });
+    }
+});
+
+// Listen for runtime messages (e.g. content script notifying that a video URL returned XML/error)
+chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+    if (message && message.action === 'VIDEO_INVALID') {
+        console.log('Popup received VIDEO_INVALID message:', message);
+        // Only act if the message applies to the currently loaded song
+        if (message.songId && message.songId === songId) {
+            window.mediaUrls = window.mediaUrls || {};
+            window.mediaUrls.video = '';
+            var btn = document.getElementById('downloadVideoButton');
+            if (btn) {
+                btn.disabled = true;
+                btn.title = i18n[currentLang].status_error;
+            }
+            showStatus(i18n[currentLang].status_error, 'error');
         }
-    });
-}
+        showStatus(i18n[currentLang].status_error, 'error');
+    }
+});
 
 // Get the active tab and request LRC data
 chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
@@ -151,12 +182,35 @@ chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
                 songTitle = response.title || 'Unknown Title';
                 artistName = response.artist || 'Unknown Artist';
                 
+                // Store media URLs if available and manage button states
+                if (response.mediaUrls) {
+                    window.mediaUrls = response.mediaUrls;
+                    console.log('Stored media URLs:', window.mediaUrls);
+                    
+                    // Enable/disable buttons based on media availability
+                    document.getElementById('downloadMp3Button').disabled = false;
+                    document.getElementById('downloadCoverButton').disabled = !window.mediaUrls.image;
+                    // Use the heuristic flag `videoLikelyValid` from the content script when present
+                    var videoAvailable = !!window.mediaUrls.video && (window.mediaUrls.videoLikelyValid !== false);
+                    document.getElementById('downloadVideoButton').disabled = !videoAvailable;
+                    
+                    // Update button tooltips
+                    if (!window.mediaUrls.image) {
+                        document.getElementById('downloadCoverButton').title = i18n[currentLang].status_error;
+                    }
+                    if (!videoAvailable) {
+                        document.getElementById('downloadVideoButton').title = i18n[currentLang].status_error;
+                    }
+                } else {
+                    console.log('No media URLs in response:', response);
+                    // Disable media buttons if no URLs available
+                    document.getElementById('downloadCoverButton').disabled = true;
+                    document.getElementById('downloadVideoButton').disabled = true;
+                }
+                
                 var convertedText = convertLrc(originalLrcContent);
                 document.getElementById('output').value = convertedText;
                 showStatus(i18n[currentLang].status_loaded, 'success');
-                
-                // Enable the MP3 button
-                document.getElementById('downloadMp3Button').disabled = false;
             } else {
                 document.getElementById('output').value = i18n[currentLang].no_content;
                 showStatus(i18n[currentLang].no_content, 'error');
@@ -175,6 +229,14 @@ return filename
 .replace(/[<>:"/\|?*]/g, '')
 .replace(/\s+/g, ' ')
 .trim();
+}
+
+// Function to clean lyrics text
+function cleanLyricsText(text) {
+    return text
+        .replace(/" +/g, '"')  // Remove spaces after quotes
+        .replace(/\s+/g, ' ')  // Normalize other spaces
+        .trim();
 }
 
 // Function to download MP3
@@ -232,11 +294,10 @@ var result = '';
 var currentVerse = [];
 var firstTimestamp = '';
 var lastTimestamp = '';
-var removePunct = document.getElementById('removePunct').checked;
-var removeAdlibs = document.getElementById('removeAdlibs').checked;
-var removeMetaTags = document.getElementById('removeMetaTags').checked;
-var toUpper = document.getElementById('toUpper').checked;
-var toLower = document.getElementById('toLower').checked;
+var removePunct = document.getElementById('removePunct').getAttribute('data-active') === 'true';
+var removeAdlibs = document.getElementById('removeAdlibs').getAttribute('data-active') === 'true';
+var toUpper = document.getElementById('toUpper').getAttribute('data-active') === 'true';
+var toLower = document.getElementById('toLower').getAttribute('data-active') === 'true';
 
 for (var i = 0; i < lines.length; i++) {
     var line = lines[i];
@@ -256,7 +317,8 @@ for (var i = 0; i < lines.length; i++) {
             
             if (toUpper) verseText = verseText.toUpperCase();
             if (toLower) verseText = verseText.toLowerCase();
-
+            
+            verseText = cleanLyricsText(verseText);
             result += '[' + firstTimestamp + ']' + verseText + '\n';
             currentVerse = [];
             firstTimestamp = '';
@@ -319,6 +381,7 @@ if (currentVerse.length > 0) {
     if (toUpper) verseText = verseText.toUpperCase();
     if (toLower) verseText = verseText.toLowerCase();
     
+    verseText = cleanLyricsText(verseText);
     result += '[' + firstTimestamp + ']' + verseText + '\n';
 }
 
@@ -337,6 +400,78 @@ showStatus(i18n[currentLang].status_error, 'error');
 } else {
 showStatus(i18n[currentLang].status_nothing, 'error');
 }
+}
+
+// Function to download cover image
+function downloadCover() {
+    console.log('Download cover clicked. State:', {
+        hasSongId: !!songId,
+        hasMediaUrls: !!window.mediaUrls,
+        mediaUrls: window.mediaUrls,
+        imageUrl: window.mediaUrls?.image
+    });
+
+    if (!songId || !window.mediaUrls?.image) {
+        console.error('Cannot download cover: missing songId or image URL');
+        showStatus(i18n[currentLang].status_error, 'error');
+        return;
+    }
+    var filename = cleanFilename(artistName + ' - ' + songTitle) + ' (Cover).jpg';
+
+    console.log('Starting cover download:', {
+        url: window.mediaUrls.image,
+        filename: filename
+    });
+
+    chrome.downloads.download({
+        url: window.mediaUrls.image,
+        filename: filename,
+        saveAs: false
+    }, function(downloadId) {
+        if (chrome.runtime.lastError) {
+            console.error('Download failed:', chrome.runtime.lastError);
+            showStatus(i18n[currentLang].status_error, 'error');
+        } else {
+            console.log('Cover download started with ID:', downloadId);
+            showStatus(i18n[currentLang].status_downloaded, 'success');
+        }
+    });
+}
+
+// Function to download cover video
+function downloadVideo() {
+    console.log('Download video clicked. State:', {
+        hasSongId: !!songId,
+        hasMediaUrls: !!window.mediaUrls,
+        mediaUrls: window.mediaUrls,
+        videoUrl: window.mediaUrls?.video
+    });
+
+    if (!songId || !window.mediaUrls?.video) {
+        console.error('Cannot download video: missing songId or video URL');
+        showStatus(i18n[currentLang].status_error, 'error');
+        return;
+    }
+    var filename = cleanFilename(artistName + ' - ' + songTitle) + ' (Video).mp4';
+
+    console.log('Starting video download:', {
+        url: window.mediaUrls.video,
+        filename: filename
+    });
+
+    chrome.downloads.download({
+        url: window.mediaUrls.video,
+        filename: filename,
+        saveAs: false
+    }, function(downloadId) {
+        if (chrome.runtime.lastError) {
+            console.error('Download failed:', chrome.runtime.lastError);
+            showStatus(i18n[currentLang].status_error, 'error');
+        } else {
+            console.log('Video download started with ID:', downloadId);
+            showStatus(i18n[currentLang].status_downloaded, 'success');
+        }
+    });
 }
 
 // Function to show status
