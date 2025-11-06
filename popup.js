@@ -188,8 +188,7 @@ chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
                     // Enable/disable buttons based on media availability
                     document.getElementById('downloadMp3Button').disabled = false;
                     document.getElementById('downloadCoverButton').disabled = !window.mediaUrls.image;
-                    // Use the heuristic flag `videoLikelyValid` from the content script when present
-                    var videoAvailable = !!window.mediaUrls.video && (window.mediaUrls.videoLikelyValid !== false);
+                    var videoAvailable = !!window.mediaUrls.video;
                     document.getElementById('downloadVideoButton').disabled = !videoAvailable;
                     
                     // Update button tooltips
