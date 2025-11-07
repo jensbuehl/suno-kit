@@ -148,7 +148,7 @@
         /* Options Grid */
         .options {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(3, 1fr);
             gap: 6px;
             margin-bottom: 8px;
         }
@@ -388,10 +388,6 @@
         <button class="option-button" id="removePunct" data-active="false">
             <span class="option-icon">Aa</span>
             <span class="option-text" data-i18n="remove_punctuation">Satzzeichen Enfernen</span>
-        </button>
-        <button class="option-button" id="removeAdlibs" data-active="false">
-            <span class="option-icon">()</span>
-            <span class="option-text" data-i18n="remove_adlibs">Adlibs Entfernen</span>
         </button>
         <button class="option-button" id="toUpper" data-active="false">
             <span class="option-icon">A</span>

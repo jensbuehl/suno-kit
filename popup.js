@@ -10,7 +10,6 @@ de: {
 title: "Fightclub SUNO Tool 🎤",
 subtitle: "Welcome to the Fighclub!",
 remove_punctuation: "Satzzeichen entfernen",
-remove_adlibs: "Adlibs entfernen",
 to_upper: "ALLES GROSS",
 to_lower: "alles klein",
 copy_clipboard: "Lyrics kopieren",
@@ -20,20 +19,19 @@ download_cover: "Cover",
 download_video: "Video",
 error_loading: "Fehler beim Laden der Daten. Bitte die Seite neu laden.",
 no_content: "Kein Inhalt verfügbar.",
-open_song_page: "Kein Song gefunden. Bitte öffne eine Suno Song-Seite.",
-status_loaded: "Lyrics geladen!",
-status_copied: "Kopiert!",
-status_downloaded: "Datei heruntergeladen!",
-status_mp3_started: "MP3 Download gestartet!",
-status_error: "Fehler",
-status_nothing: "Nichts zu kopieren!",
+open_song_page: "Kein Song gefunden. Bitte öffne eine Hurensuno Song-Seite.",
+status_loaded: "Lyrics geladen",
+status_copied: "Lyrics in die Zwischenablage kopiert",
+status_downloaded: "Datei heruntergeladen",
+status_mp3_started: "Download gestartet",
+status_error: "Unbekannter Fehler",
+status_nothing: "Es gibt nichts zu kopieren, Hurensohn!",
 placeholder: "Lade Lyrics, Hurensohn!"
 },
 en: {
 title: "Fightclub SUNO Tool 🎤",
 subtitle: "Welcome to the Fighclub!",
 remove_punctuation: "Remove punctuation",
-remove_adlibs: "Remove adlibs",
 to_upper: "UPPERCASE",
 to_lower: "lowercase",
 copy_clipboard: "Copy Lyrics",
@@ -43,13 +41,13 @@ download_cover: "Cover",
 download_video: "Video",
 error_loading: "Error loading data. Please reload the page.",
 no_content: "No content available.",
-open_song_page: "No Song found. Please open a Suno song page.",
+open_song_page: "No Song found. Please open a Hurensuno song page.",
 status_loaded: "Lyrics loaded",
 status_copied: "Lyrics copied",
 status_downloaded: "File downloaded",
 status_mp3_started: "MP3 download started!",
-status_error: "Error",
-status_nothing: "Nothing to copy!",
+status_error: "Unknown Error",
+status_nothing: "Nothing to copy, motherfucker!",
 placeholder: "Processing Lyrics, bitch!"
 }
 };
@@ -57,7 +55,7 @@ placeholder: "Processing Lyrics, bitch!"
 // Array mit allen Satzzeichen, die entfernt werden sollen
 var PUNCTUATION_TO_REMOVE = [
     '-', ',', '?', '*', '"', '–', '!', '„', '"',
-    '.', ':','‘','\'','’ ','“','”',
+    '.', ':','“','”',
     ';', '¿', '¡', '…', '—', '(', ')', '[', ']', '{', '}', '/', '\\',
     '«', '»', '‹', '›', '〈', '〉', '《', '》', '【', '】', '〔', '〕'
 ];
@@ -126,7 +124,7 @@ document.getElementById('downloadCoverButton').addEventListener('click', downloa
 document.getElementById('downloadVideoButton').addEventListener('click', downloadVideo);
 
 // Option button event listeners
-var optionIds = ['removePunct', 'removeAdlibs', 'toUpper', 'toLower'];
+var optionIds = ['removePunct', 'toUpper', 'toLower'];
 optionIds.forEach(function(id) {
     var button = document.getElementById(id);
     if (button) {
@@ -231,6 +229,8 @@ return filename
 // Function to clean lyrics text
 function cleanLyricsText(text) {
     return text
+        .replace(/([\(])\s+/g, '$1') // remove space directly after opening brackets: (
+        .replace(/„ +/g, '„')  // Remove spaces after German quotes
         .replace(/" +/g, '"')  // Remove spaces after quotes
         .replace(/\s+/g, ' ')  // Normalize other spaces
         .trim();
@@ -292,7 +292,6 @@ var currentVerse = [];
 var firstTimestamp = '';
 var lastTimestamp = '';
 var removePunct = document.getElementById('removePunct').getAttribute('data-active') === 'true';
-var removeAdlibs = document.getElementById('removeAdlibs').getAttribute('data-active') === 'true';
 var toUpper = document.getElementById('toUpper').getAttribute('data-active') === 'true';
 var toLower = document.getElementById('toLower').getAttribute('data-active') === 'true';
 
@@ -304,10 +303,6 @@ for (var i = 0; i < lines.length; i++) {
         if (currentVerse.length > 0) {
             var verseText = currentVerse.join(' ').trim();
 
-            if (removeAdlibs) {
-                verseText = verseText.replace(/KATEX_INLINE_OPEN[^)]*KATEX_INLINE_CLOSE/g, '').trim();
-            }
-            
             if (removePunct) {
                 verseText = removePunctuation(verseText);
             }
@@ -366,10 +361,6 @@ for (var i = 0; i < lines.length; i++) {
 
 if (currentVerse.length > 0) {
     var verseText = currentVerse.join(' ').trim();
-    
-    if (removeAdlibs) {
-        verseText = verseText.replace(/KATEX_INLINE_OPEN[^)]*KATEX_INLINE_CLOSE/g, '').trim();
-    }
     
     if (removePunct) {
         verseText = removePunctuation(verseText);
