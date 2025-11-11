@@ -84,6 +84,38 @@
             z-index: 1;
         }
 
+        /* Close Button */
+        .close-button {
+            position: absolute;
+            top: 12px;
+            left: 20px;
+            display: flex;
+            gap: 4px;
+            background: var(--bg-tertiary);
+            border-radius: 18px;
+            padding: 3px;
+            border: 1px solid var(--border-color);
+            z-index: 10;
+        }
+
+        .close-btn {
+            padding: 5px 10px;
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid transparent;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            color: var(--accent-error);
+            border-color: var(--accent-error);
+            background: rgba(248, 113, 113, 0.1);
+        }
+
         /* Language Switcher */
         .language-switcher {
             position: absolute;
@@ -374,6 +406,9 @@
 <body>
 <div class="bg-animation"></div>
 <div class="container">
+    <div class="close-button">
+        <button class="close-btn" id="closeButton">✕</button>
+    </div>
     <div class="language-switcher">
         <button class="lang-btn active" data-lang="de">DE</button>
         <button class="lang-btn" data-lang="en">EN</button>

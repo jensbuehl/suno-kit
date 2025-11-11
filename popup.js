@@ -118,7 +118,9 @@ document.querySelectorAll('.lang-btn').forEach(function(btn) {
 // Button event listeners
 document.getElementById('copyButton').addEventListener('click', copyToClipboard);
 document.getElementById('downloadButton').addEventListener('click', downloadResult);
-// Close button removed
+document.getElementById('closeButton').addEventListener('click', function() {
+    window.close();
+});
 document.getElementById('downloadMp3Button').addEventListener('click', downloadMp3);
 document.getElementById('downloadCoverButton').addEventListener('click', downloadCover);
 document.getElementById('downloadVideoButton').addEventListener('click', downloadVideo);
