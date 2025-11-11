@@ -501,13 +501,7 @@ function downloadVideo() {
     });
 }
 
-// Function to show status
+// Function to log status (replaces visual status with console debug)
 function showStatus(message, type) {
-    var statusDiv = document.getElementById('statusMessage');
-    if (!statusDiv) return;
-
-    // Set message and class (type can be 'success', 'error', 'info', etc.)
-    statusDiv.textContent = message || '';
-    // apply the variant class (e.g. 'success', 'error') so colors update
-    statusDiv.className = 'status ' + (type || '');
+    console.debug('[Suno Extension] ' + (type || 'info').toUpperCase() + ': ' + (message || ''));
 }

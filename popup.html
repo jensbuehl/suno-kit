@@ -6,18 +6,19 @@
     <title>Suno Lyrics Downloader</title>
     <style>
         :root {
-            --bg-primary: #2b2b2b;
-            --bg-secondary: #1a1919;
-            --bg-tertiary: #4a4444;
-            --accent-primary: #ba2b1e;
-            --accent-secondary: #e7e3d7;
-            --accent-success: #4ade80;
-            --accent-error: #f87171;
-            --accent-warning: #fbbf24;
-            --text-primary: #f0f0f5;
-            --text-secondary: #e7e3d7;
-            --text-muted: #cfccc0;
-            --border-color: #4a4444;
+            
+
+--bg-primary: #1E1E1E;
+--bg-secondary: #333333;
+--bg-tertiary: #444444;
+--accent-primary: #E03C31;
+--accent-secondary: #E0DBD0;
+--text-primary: #FAFAFA;
+--text-secondary: #DADADA;
+--text-muted: #B5B5B5;
+--border-color: #444444;
+
+
         }
 
         * {
@@ -44,29 +45,7 @@
             position: relative;
         }
 
-        /* Animated background gradient */
-        .bg-animation {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 650px;
-            height: 600px;
-            background: radial-gradient(circle at center, rgba(186, 43, 30, 0.1) 0%, transparent 70%);
-            animation: pulse 15s ease-in-out infinite;
-            pointer-events: none;
-            z-index: 0;
-        }
 
-        @keyframes pulse {
-            0%, 100% { 
-                transform: scale(1) rotate(0deg);
-                opacity: 0.5;
-            }
-            50% { 
-                transform: scale(1.2) rotate(180deg);
-                opacity: 0.8;
-            }
-        }
 
         .container {
             position: absolute;
@@ -111,9 +90,8 @@
         }
 
         .close-btn:hover {
-            color: var(--accent-error);
-            border-color: var(--accent-error);
-            background: rgba(248, 113, 113, 0.1);
+            background: rgba(186, 43, 30, 0.1);
+            border-color: var(--accent-primary);
         }
 
         /* Language Switcher */
@@ -278,44 +256,12 @@
             background: var(--accent-secondary);
         }
 
-        /* Static status bar placed below buttons (inside .buttons-container) */
-        .status {
-            position: relative;
-            width: 100%;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            padding: 0 14px;
-            border-radius: 8px;
-            font-size: 13px;
-            color: var(--text-primary);
-            background: var(--bg-tertiary); /* default background shade */
-            border: 1px solid var(--border-color);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-            z-index: 10;
-        }
 
-        .status.success {
-            background: rgba(74, 222, 128, 0.12);
-            color: var(--accent-success);
-            border: 1px solid rgba(74, 222, 128, 0.18);
-        }
-
-        .status.error {
-            background: rgba(248, 113, 113, 0.12);
-            color: var(--accent-error);
-            border: 1px solid rgba(248, 113, 113, 0.18);
-        }
-
-        .status.info {
-            background: rgba(251, 191, 36, 0.10);
-            color: var(--accent-warning);
-            border: 1px solid rgba(251, 191, 36, 0.14);
-        }
 
         /* Buttons Container */
         .buttons-container {
             margin-top: auto; /* Push to bottom */
+            margin-bottom: 0; /* Ensure consistent bottom spacing matching container padding */
         }
 
         /* Buttons */
@@ -328,6 +274,7 @@
 
         .button-group.secondary {
             grid-template-columns: repeat(3, 1fr);
+            margin-bottom: 0; /* Remove bottom margin for last button group to match container padding */
         }
 
         button {
@@ -404,7 +351,6 @@
     </style>
 </head>
 <body>
-<div class="bg-animation"></div>
 <div class="container">
     <div class="close-button">
         <button class="close-btn" id="closeButton">✕</button>
@@ -463,8 +409,6 @@
                 <span data-i18n="download_video">Video</span>
             </button>
         </div>
-        <!-- Static status bar placed below the buttons to avoid overlap -->
-        <div class="status" id="statusMessage">&nbsp;</div>
     </div>
 </div>
 
