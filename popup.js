@@ -183,23 +183,60 @@ chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
                 // Store media URLs if available and manage button states
                 if (response.mediaUrls) {
                     window.mediaUrls = response.mediaUrls;
-                    console.log('Stored media URLs:', window.mediaUrls);
+                    console.log('[Button State] Stored media URLs:', window.mediaUrls);
                     
                     // Enable/disable buttons based on media availability
                     document.getElementById('downloadMp3Button').disabled = false;
                     document.getElementById('downloadCoverButton').disabled = !window.mediaUrls.image;
-                    var videoAvailable = !!window.mediaUrls.video;
-                    document.getElementById('downloadVideoButton').disabled = !videoAvailable;
                     
-                    // Update button tooltips
+                    var videoUrlPresent = !!window.mediaUrls.video;
+                    // Keep video button disabled until we confirm video is accessible (no flickering)
+                    document.getElementById('downloadVideoButton').disabled = true;
+                    
+                    console.log('[Button State] Initial button states:', {
+                        mp3: true,
+                        cover: !!window.mediaUrls.image,
+                        video: 'checking...',
+                        videoUrl: window.mediaUrls.video
+                    });
+                    
+                    // Check video accessibility asynchronously if URL is present
+                    if (videoUrlPresent) {
+                        // Set tooltip to indicate checking
+                        document.getElementById('downloadVideoButton').title = 'Checking video availability...';
+                        
+                        checkVideoAvailability(window.mediaUrls.video).then(function(isVideoAccessible) {
+                            console.log('[Video Check] Video accessibility result:', isVideoAccessible);
+                            
+                            var videoButton = document.getElementById('downloadVideoButton');
+                            videoButton.disabled = !isVideoAccessible;
+                            
+                            if (!isVideoAccessible) {
+                                videoButton.title = 'Video file not accessible or does not exist';
+                                showStatus('Video file not accessible for this song', 'error');
+                            } else {
+                                videoButton.title = i18n[currentLang].download_video;
+                                console.log('[Button State] Video button enabled - video is accessible');
+                            }
+                        }).catch(function(error) {
+                            console.error('[Video Check] Video accessibility check failed:', error);
+                            document.getElementById('downloadVideoButton').disabled = true;
+                            document.getElementById('downloadVideoButton').title = 'Video accessibility check failed';
+                        });
+                    } else {
+                        // No video URL present
+                        document.getElementById('downloadVideoButton').title = 'No video URL available';
+                    }
+                    
+                    // Update other button tooltips
                     if (!window.mediaUrls.image) {
                         document.getElementById('downloadCoverButton').title = i18n[currentLang].status_error;
                     }
-                    if (!videoAvailable) {
-                        document.getElementById('downloadVideoButton').title = i18n[currentLang].status_error;
+                    if (!videoUrlPresent) {
+                        document.getElementById('downloadVideoButton').title = 'No video URL available';
                     }
                 } else {
-                    console.log('No media URLs in response:', response);
+                    console.log('[Button State] No media URLs in response:', response);
                     // Disable media buttons if no URLs available
                     document.getElementById('downloadCoverButton').disabled = true;
                     document.getElementById('downloadVideoButton').disabled = true;
@@ -236,6 +273,58 @@ function cleanLyricsText(text) {
         .replace(/" +/g, '"')  // Remove spaces after quotes
         .replace(/\s+/g, ' ')  // Normalize other spaces
         .trim();
+}
+
+// Function to check if video URL is actually accessible
+async function checkVideoAvailability(videoUrl) {
+    if (!videoUrl || videoUrl.trim() === '') {
+        console.log('[Video Check] No video URL provided');
+        return false;
+    }
+    
+    try {
+        console.log('[Video Check] Testing video accessibility:', videoUrl);
+        
+        // Try to fetch with a HEAD request to check if the resource exists
+        const response = await fetch(videoUrl, {
+            method: 'HEAD',
+            mode: 'no-cors'  // This will succeed but we won't get response details
+        });
+        
+        // Since no-cors doesn't give us status, try a different approach
+        // Create an img or video element and see if it loads
+        return new Promise((resolve) => {
+            const video = document.createElement('video');
+            video.style.display = 'none';
+            
+            const timeout = setTimeout(() => {
+                document.body.removeChild(video);
+                console.log('[Video Check] Video check timed out - assuming not available');
+                resolve(false);
+            }, 5000); // 5 second timeout
+            
+            video.onloadedmetadata = () => {
+                clearTimeout(timeout);
+                document.body.removeChild(video);
+                console.log('[Video Check] Video metadata loaded - video appears available');
+                resolve(true);
+            };
+            
+            video.onerror = () => {
+                clearTimeout(timeout);
+                document.body.removeChild(video);
+                console.log('[Video Check] Video failed to load - not available');
+                resolve(false);
+            };
+            
+            document.body.appendChild(video);
+            video.src = videoUrl;
+        });
+        
+    } catch (error) {
+        console.log('[Video Check] Video accessibility check failed:', error);
+        return false;
+    }
 }
 
 // Function to add vizzy workaround (duplicate last line with +2 seconds)
