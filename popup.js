@@ -55,8 +55,8 @@ placeholder: "Processing Lyrics, bitch!"
 // Array mit allen Satzzeichen, die entfernt werden sollen
 var PUNCTUATION_TO_REMOVE = [
     '-', ',', '?', '*', '"', '–', '!', '„', '"',
-    '.', ':','“','”',
-    ';', '¿', '¡', '…', '—', '(', ')', '[', ']', '{', '}', '/', '\\',
+    '.', ':','"','"',
+    ';', '¿', '¡', '…', '—', '(', ')', '{', '}', '/', '\\',
     '«', '»', '‹', '›', '〈', '〉', '《', '》', '【', '】', '〔', '〕'
 ];
 // Function to translate the interface
@@ -266,6 +266,11 @@ return filename
 }
 
 // Function to clean lyrics text
+// Function to remove square brackets (always applied first)
+function removeBrackets(text) {
+    return text.replace(/\[[^\]]*\]/g, ''); // Remove ALL square brackets and their contents
+}
+
 function cleanLyricsText(text) {
     return text
         .replace(/([\(])\s+/g, '$1') // remove space directly after opening brackets: (
@@ -429,6 +434,9 @@ for (var i = 0; i < lines.length; i++) {
         if (currentVerse.length > 0) {
             var verseText = currentVerse.join(' ').trim();
 
+            // ALWAYS remove brackets first, before any other processing
+            verseText = removeBrackets(verseText);
+
             if (removePunct) {
                 verseText = removePunctuation(verseText);
             }
@@ -458,13 +466,12 @@ for (var i = 0; i < lines.length; i++) {
         var content = textPart.substring(openBracketPos + 1, closeBracketPos);
         
         if (/^\d{2}:\d{2}\.\d{2,3}$/.test(content)) {
+            // This is a timestamp - keep it for timing
             timeMatches.push({'1': content});
-            textPart = textPart.substring(0, openBracketPos) + textPart.substring(closeBracketPos + 1);
-            pos = openBracketPos;
-        } else {
-            textPart = textPart.substring(0, openBracketPos) + textPart.substring(closeBracketPos + 1);
-            pos = openBracketPos;
         }
+        // Remove ALL square brackets and their contents (timestamps and any other content)
+        textPart = textPart.substring(0, openBracketPos) + textPart.substring(closeBracketPos + 1);
+        pos = openBracketPos;
     }
     
     textPart = textPart.trim();
@@ -475,6 +482,9 @@ for (var i = 0; i < lines.length; i++) {
     }
 
     if (textPart) {
+        // ALWAYS remove brackets first, before any other processing
+        textPart = removeBrackets(textPart);
+        
         if (removePunct) {
             textPart = removePunctuation(textPart);
         }
@@ -487,6 +497,9 @@ for (var i = 0; i < lines.length; i++) {
 
 if (currentVerse.length > 0) {
     var verseText = currentVerse.join(' ').trim();
+    
+    // ALWAYS remove brackets first, before any other processing
+    verseText = removeBrackets(verseText);
     
     if (removePunct) {
         verseText = removePunctuation(verseText);
