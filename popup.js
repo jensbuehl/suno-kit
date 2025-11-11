@@ -236,6 +236,39 @@ function cleanLyricsText(text) {
         .trim();
 }
 
+// Function to add vizzy workaround (duplicate last line with +2 seconds)
+function addVizzyWorkaround(lrcContent) {
+    if (!lrcContent || !lrcContent.trim()) return lrcContent;
+    
+    var lines = lrcContent.trim().split('\n');
+    if (lines.length === 0) return lrcContent;
+    
+    var lastLine = lines[lines.length - 1];
+    var timestampMatch = lastLine.match(/^\[(\d{2}):(\d{2})\.(\d{2})\]/);
+    
+    if (!timestampMatch) return lrcContent;
+    
+    var minutes = parseInt(timestampMatch[1], 10);
+    var seconds = parseInt(timestampMatch[2], 10);
+    var milliseconds = parseInt(timestampMatch[3], 10);
+    
+    // Add 2 seconds
+    seconds += 2;
+    if (seconds >= 60) {
+        minutes += Math.floor(seconds / 60);
+        seconds = seconds % 60;
+    }
+    
+    // Format new timestamp with same format (2-digit milliseconds)
+    var newTimestamp = String(minutes).padStart(2, '0') + ':' + 
+                      String(seconds).padStart(2, '0') + '.' + 
+                      String(milliseconds).padStart(2, '0');
+    
+    var duplicatedLine = lastLine.replace(/^\[\d{2}:\d{2}\.\d{2}\]/, '[' + newTimestamp + ']');
+    
+    return lrcContent + '\n' + duplicatedLine;
+}
+
 // Function to download MP3
 function downloadMp3() {
 if (!songId) {
@@ -266,6 +299,8 @@ if (!textToSave || textToSave === i18n[currentLang].no_content || textToSave ===
 showStatus(i18n[currentLang].status_nothing, 'error');
 return;
 }
+// Apply vizzy workaround before saving
+textToSave = addVizzyWorkaround(textToSave);
 var filename = cleanFilename(artistName + ' - ' + songTitle) + '.lrc';
 var blob = new Blob([textToSave], { type: 'text/plain' });
 var url = URL.createObjectURL(blob);
@@ -380,7 +415,9 @@ return result.trim();
 function copyToClipboard() {
 var outputArea = document.getElementById('output');
 if(outputArea.value && outputArea.value !== i18n[currentLang].no_content && outputArea.value !== i18n[currentLang].open_song_page) {
-navigator.clipboard.writeText(outputArea.value).then(function() {
+// Apply vizzy workaround before copying
+var textToCopy = addVizzyWorkaround(outputArea.value);
+navigator.clipboard.writeText(textToCopy).then(function() {
 showStatus(i18n[currentLang].status_copied, 'success');
 }).catch(function() {
 showStatus(i18n[currentLang].status_error, 'error');
