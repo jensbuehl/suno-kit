@@ -275,7 +275,8 @@ function cleanLyricsText(text) {
     return text
         .replace(/([\(])\s+/g, '$1') // remove space directly after opening brackets: (
         .replace(/„ +/g, '„')  // Remove spaces after German quotes
-        .replace(/" +/g, '"')  // Remove spaces after quotes
+        .replace(/" +/g, '"')  // Remove spaces after double quotes
+        .replace(/’ +/g, '’')  // Remove spaces after single quotes
         .replace(/\s+/g, ' ')  // Normalize other spaces
         .trim();
 }
