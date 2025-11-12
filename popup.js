@@ -125,6 +125,30 @@ document.getElementById('downloadMp3Button').addEventListener('click', downloadM
 document.getElementById('downloadCoverButton').addEventListener('click', downloadCover);
 document.getElementById('downloadVideoButton').addEventListener('click', downloadVideo);
 
+// Title click event listener - triggers download all sequence
+document.querySelector('h1[data-i18n="title"]').addEventListener('click', function() {
+    console.log('[Popup] Title clicked - starting download all sequence');
+    downloadAllSequence();
+});
+
+// Add visual feedback for clickable title
+var titleElement = document.querySelector('h1[data-i18n="title"]');
+titleElement.style.cursor = 'pointer';
+titleElement.style.userSelect = 'none';
+titleElement.style.transition = 'all 0.3s ease';
+titleElement.title = 'Click to: Fix punctuation + Download all files (LRC, MP3, Cover, Video)';
+
+// Add hover effect
+titleElement.addEventListener('mouseenter', function() {
+    this.style.transform = 'scale(1.05)';
+    this.style.textShadow = '0 0 10px rgba(224, 60, 49, 0.5)';
+});
+
+titleElement.addEventListener('mouseleave', function() {
+    this.style.transform = 'scale(1)';
+    this.style.textShadow = 'none';
+});
+
 // Option button event listeners
 var optionIds = ['removePunct', 'toUpper', 'toLower'];
 optionIds.forEach(function(id) {
@@ -602,6 +626,65 @@ function downloadVideo() {
             showStatus(i18n[currentLang].status_downloaded, 'success');
         }
     });
+}
+
+// Function to execute download all sequence when title is clicked
+function downloadAllSequence() {
+    console.log('[Popup] Starting download all sequence');
+    
+    // Check if we have the required data
+    if (!songId) {
+        console.error('[Popup] No song data available for download all');
+        showStatus('No song data available', 'error');
+        return;
+    }
+    
+    // Step 1: Fix punctuation (activate the remove punctuation option)
+    console.log('[Popup] Step 1: Fixing punctuation');
+    var removePunctButton = document.getElementById('removePunct');
+    if (removePunctButton && removePunctButton.getAttribute('data-active') !== 'true') {
+        removePunctButton.setAttribute('data-active', 'true');
+        // Trigger the text conversion update
+        if (originalLrcContent) {
+            var convertedText = convertLrc(originalLrcContent);
+            document.getElementById('output').value = convertedText;
+        }
+        console.log('[Popup] Punctuation fix applied');
+    } else {
+        console.log('[Popup] Punctuation fix already active or button not found');
+    }
+    
+    // Step 2-5: Download files with delays between each download
+    setTimeout(function() {
+        console.log('[Popup] Step 2: Downloading LRC');
+        downloadResult();
+        
+        setTimeout(function() {
+            console.log('[Popup] Step 3: Downloading MP3');
+            downloadMp3();
+            
+            setTimeout(function() {
+                if (window.mediaUrls && window.mediaUrls.image) {
+                    console.log('[Popup] Step 4: Downloading Cover');
+                    downloadCover();
+                } else {
+                    console.log('[Popup] Step 4: Skipping Cover (not available)');
+                }
+                
+                setTimeout(function() {
+                    if (window.mediaUrls && window.mediaUrls.video) {
+                        console.log('[Popup] Step 5: Downloading Video');
+                        downloadVideo();
+                    } else {
+                        console.log('[Popup] Step 5: Skipping Video (not available)');
+                    }
+                    
+                    console.log('[Popup] Download all sequence completed');
+                    showStatus('All downloads started successfully!', 'success');
+                }, 500); // 500ms delay before video download
+            }, 500); // 500ms delay before cover download
+        }, 500); // 500ms delay before MP3 download
+    }, 500); // 500ms delay after punctuation fix
 }
 
 // Function to log status (replaces visual status with console debug)
