@@ -57,7 +57,8 @@ var PUNCTUATION_TO_REMOVE = [
     '-', ',', '?', '*', '"', '–', '!', '„', '"',
     '.', ':','"','"',
     ';', '¿', '¡', '…', '—', '(', ')', '{', '}', '/', '\\',
-    '«', '»', '‹', '›', '〈', '〉', '《', '》', '【', '】', '〔', '〕'
+    '«', '»', '‹', '›', '〈', '〉', '《', '》', '【', '】', '〔', '〕',
+    '~' // Add tilde
 ];
 // Function to translate the interface
 function translateInterface(lang) {
@@ -96,9 +97,20 @@ var result = text;
 for (var i = 0; i < PUNCTUATION_TO_REMOVE.length; i++) {
 var char = PUNCTUATION_TO_REMOVE[i];
 while (result.indexOf(char) !== -1) {
-result = result.replace(char, ' ');
+result = result.replace(char, '');
 }
 }
+
+// Remove emojis (Unicode ranges for emojis)
+result = result.replace(/[\u{1F600}-\u{1F64F}]/gu, ''); // Emoticons
+result = result.replace(/[\u{1F300}-\u{1F5FF}]/gu, ''); // Misc Symbols and Pictographs
+result = result.replace(/[\u{1F680}-\u{1F6FF}]/gu, ''); // Transport and Map
+result = result.replace(/[\u{1F1E0}-\u{1F1FF}]/gu, ''); // Flags
+result = result.replace(/[\u{2600}-\u{26FF}]/gu, '');   // Misc symbols
+result = result.replace(/[\u{2700}-\u{27BF}]/gu, '');   // Dingbats
+result = result.replace(/[\u{1F900}-\u{1F9FF}]/gu, ''); // Supplemental Symbols and Pictographs
+result = result.replace(/[\u{1FA70}-\u{1FAFF}]/gu, ''); // Symbols and Pictographs Extended-A
+
 result = result.replace(/\s+/g, ' ').trim();
 return result;
 }
