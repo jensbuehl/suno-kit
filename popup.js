@@ -9,7 +9,7 @@ var i18n = {
 de: {
 title: "Fightclub SUNO Tool 🎤",
 subtitle: "Welcome to the Fighclub!",
-remove_punctuation: "Satzzeichen entfernen",
+remove_punctuation: "Text bereinigen",
 to_upper: "ALLES GROSS",
 to_lower: "alles klein",
 copy_clipboard: "Lyrics kopieren",
@@ -31,7 +31,7 @@ placeholder: "Lade Lyrics, Hurensohn!"
 en: {
 title: "Fightclub SUNO Tool 🎤",
 subtitle: "Welcome to the Fighclub!",
-remove_punctuation: "Remove punctuation",
+remove_punctuation: "Clean text",
 to_upper: "UPPERCASE",
 to_lower: "lowercase",
 copy_clipboard: "Copy Lyrics",
@@ -148,7 +148,7 @@ var titleElement = document.querySelector('h1[data-i18n="title"]');
 titleElement.style.cursor = 'pointer';
 titleElement.style.userSelect = 'none';
 titleElement.style.transition = 'all 0.3s ease';
-titleElement.title = 'Click to: Fix punctuation + Download all files (LRC, MP3, Cover, Video)';
+titleElement.title = 'Click to: Clean text + Download all files (LRC, MP3, Cover, Video)';
 
 // Add hover effect
 titleElement.addEventListener('mouseenter', function() {
@@ -651,8 +651,8 @@ function downloadAllSequence() {
         return;
     }
     
-    // Step 1: Fix punctuation (activate the remove punctuation option)
-    console.log('[Popup] Step 1: Fixing punctuation');
+    // Step 1: Clean text (activate the text cleaning option)
+    console.log('[Popup] Step 1: Cleaning text');
     var removePunctButton = document.getElementById('removePunct');
     if (removePunctButton && removePunctButton.getAttribute('data-active') !== 'true') {
         removePunctButton.setAttribute('data-active', 'true');
@@ -661,9 +661,9 @@ function downloadAllSequence() {
             var convertedText = convertLrc(originalLrcContent);
             document.getElementById('output').value = convertedText;
         }
-        console.log('[Popup] Punctuation fix applied');
+        console.log('[Popup] Text cleaning applied');
     } else {
-        console.log('[Popup] Punctuation fix already active or button not found');
+        console.log('[Popup] Text cleaning already active or button not found');
     }
     
     // Step 2-5: Download files with delays between each download
