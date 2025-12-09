@@ -29,9 +29,10 @@
    "minimum_chrome_version": "114",
    "name": "Fightclub SUNO Tool",
    "update_url": "https://clients2.google.com/service/update2/crx",
-   "version": "1.1.0",
+   "version": "1.1.1",
    "web_accessible_resources": [{
       "resources": ["popup.html", "popup.js"],
       "matches": ["<all_urls>"]
    }]
+
 }
