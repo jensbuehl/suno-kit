@@ -1,4 +1,4 @@
-var originalLrcContent = '';
+﻿var originalLrcContent = '';
 var songId = '';
 var songTitle = '';
 var artistName = '';
@@ -7,8 +7,8 @@ var currentLang = 'de'; // Default language
 // Language strings
 var i18n = {
 de: {
-title: "Fightclub SUNO Tool 🎤",
-subtitle: "Welcome to the Fighclub!",
+title: "Fightclub SUNO Tool",
+subtitle: "More than Battlerap!",
 remove_punctuation: "Text bereinigen",
 to_upper: "ALLES GROSS",
 to_lower: "alles klein",
@@ -18,8 +18,8 @@ download_mp3: "Audio",
 download_cover: "Cover",
 download_video: "Video",
 error_loading: "Fehler beim Laden der Daten. Bitte die Seite neu laden.",
-no_content: "Kein Inhalt verfügbar.",
-open_song_page: "Kein Song gefunden. Bitte öffne eine Hurensuno Song-Seite.",
+    no_content: "Kein Inhalt verfügbar.",
+    open_song_page: "Kein Song gefunden. Bitte öffne eine Hurensuno Song-Seite.",
 status_loaded: "Lyrics geladen",
 status_copied: "Lyrics in die Zwischenablage kopiert",
 status_downloaded: "Datei heruntergeladen",
@@ -27,10 +27,17 @@ status_mp3_started: "Download gestartet",
 status_error: "Unbekannter Fehler",
 status_nothing: "Es gibt nichts zu kopieren, Hurensohn!",
 placeholder: "Lade Lyrics, Hurensohn!"
+    ,
+    token_path_label: "Token Erkennung",
+    alternative_prefix: "Alternative",
+    no_path_found: "Konnte keinen Weg finden",
+    no_token_found: "Konnte kein Token finden",
+    auto_label: "Auto",
+    selection_label: "Auswahl"
 },
 en: {
-title: "Fightclub SUNO Tool 🎤",
-subtitle: "Welcome to the Fighclub!",
+title: "Fightclub SUNO Tool",
+subtitle: "More than Battlerap!",
 remove_punctuation: "Clean text",
 to_upper: "UPPERCASE",
 to_lower: "lowercase",
@@ -49,15 +56,98 @@ status_mp3_started: "MP3 download started!",
 status_error: "Unknown Error",
 status_nothing: "Nothing to copy, motherfucker!",
 placeholder: "Processing Lyrics, bitch!"
+    ,
+    token_path_label: "Token Discovery",
+    alternative_prefix: "Alternative",
+    no_path_found: "couldn't find a path",
+    no_token_found: "No token found",
+    auto_label: "Auto",
+    selection_label: "Selection"
 }
 };
+
+// Helper to show, woher das Token kam
+function updateTokenPath(text) {
+    var el = document.getElementById('tokenPathDisplay');
+    if (!el) return;
+    var raw = (text && typeof text === 'string' && text.trim()) ? text.trim() : null;
+    var fallback = (i18n[currentLang] && i18n[currentLang].no_token_found) ? i18n[currentLang].no_token_found : 'Konnte kein Token finden';
+
+    // Special machine code from content script indicating 'no token found'
+    if (raw === 'NO_TOKEN') {
+        var translated = (i18n[currentLang] && i18n[currentLang].no_token_found) ? i18n[currentLang].no_token_found : 'Konnte kein Token finden';
+        el.textContent = translated;
+        el.title = translated;
+        return;
+    }
+
+    var value = raw || fallback;
+
+    if (raw) {
+        // Replace leading German/English "Weg <n>" with localized alternative prefix
+        value = raw.replace(/\bWeg\s*(\d+)\b/gi, function(_, num) {
+            var prefix = (i18n[currentLang] && i18n[currentLang].alternative_prefix) ? i18n[currentLang].alternative_prefix : 'Weg';
+            return prefix + ' ' + num;
+        });
+        // Also translate "Auswahl" and "Auto" prefixes if present
+        value = value.replace(/\bAuswahl\b/gi, (i18n[currentLang] && i18n[currentLang].selection_label) ? i18n[currentLang].selection_label : 'Auswahl');
+        value = value.replace(/\bAuto\b/gi, (i18n[currentLang] && i18n[currentLang].auto_label) ? i18n[currentLang].auto_label : 'Auto');
+    }
+
+    el.textContent = value;
+    el.title = value;
+}
+
+function updateTokenOptions(options, selectedId) {
+    var selectEl = document.getElementById('tokenPathSelect');
+    if (!selectEl) return;
+
+    var safeOptions = Array.isArray(options) ? options : [];
+    var keepValue = selectedId || selectEl.value || 'auto';
+
+    selectEl.innerHTML = '';
+
+    var autoOpt = document.createElement('option');
+    autoOpt.value = 'auto';
+    autoOpt.textContent = 'Auto';
+    selectEl.appendChild(autoOpt);
+
+    safeOptions.forEach(function(opt) {
+        if (!opt || !opt.id) return;
+        var o = document.createElement('option');
+        o.value = opt.id;
+
+        // Prefer explicit numeric index if provided, otherwise try to parse existing label
+        var index = opt.index || (typeof opt.label === 'string' && (opt.label.match(/(\d+)\s*$/) || [])[1]);
+        if (index) {
+            var prefix = (i18n[currentLang] && i18n[currentLang].alternative_prefix) ? i18n[currentLang].alternative_prefix : 'Weg';
+            o.textContent = prefix + ' ' + index;
+        } else if (opt.label) {
+            // If label contains "Weg X", replace with localized prefix
+            var m = String(opt.label).match(/Weg\s*(\d+)/i);
+            if (m && m[1]) {
+                var prefix2 = (i18n[currentLang] && i18n[currentLang].alternative_prefix) ? i18n[currentLang].alternative_prefix : 'Weg';
+                o.textContent = prefix2 + ' ' + m[1];
+            } else {
+                o.textContent = opt.label;
+            }
+        } else {
+            o.textContent = opt.id;
+        }
+
+        selectEl.appendChild(o);
+    });
+
+    var found = Array.from(selectEl.options).some(function(o) { return o.value === keepValue; });
+    selectEl.value = found ? keepValue : 'auto';
+}
 
 // Array mit allen Satzzeichen, die entfernt werden sollen
 var PUNCTUATION_TO_REMOVE = [
     '-', ',', '?', '*', '"', '–', '!', '„', '"',
     '.', ':','"','"',
     ';', '¿', '¡', '…', '—', '(', ')', '{', '}', '/', '\\',
-    '«', '»', '‹', '›', '〈', '〉', '《', '》', '【', '】', '〔', '〕',
+    '«', '»', '‹', '›', '〈', '〉', '《', '》', '〔', '〕',
     '~' // Add tilde
 ];
 // Function to translate the interface
@@ -119,6 +209,11 @@ document.addEventListener('DOMContentLoaded', function() {
 // Load saved language preference
 var savedLang = localStorage.getItem('suno-lyrics-lang') || 'de';
 translateInterface(savedLang);
+updateTokenPath('NO_TOKEN');
+updateTokenOptions([], 'auto');
+
+var isRefreshingFromDropdown = false;
+var lastTokenOptions = [];
 // Language switcher
 document.querySelectorAll('.lang-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
@@ -126,6 +221,54 @@ document.querySelectorAll('.lang-btn').forEach(function(btn) {
         translateInterface(lang);
     });
 });
+
+// Dropdown: Token-Weg wechseln (triggert Neuladen der Lyrics)
+var tokenSelect = document.getElementById('tokenPathSelect');
+if (tokenSelect) {
+    tokenSelect.addEventListener('change', function() {
+        if (isRefreshingFromDropdown) return;
+        var tokenOptionId = this.value || 'auto';
+
+        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+            if (!tabs[0] || !tabs[0].id) return;
+            isRefreshingFromDropdown = true;
+            chrome.tabs.sendMessage(tabs[0].id, {action: "GET_LRC_DATA", tokenOptionId: tokenOptionId}, function(response) {
+                isRefreshingFromDropdown = false;
+                if (chrome.runtime.lastError) {
+                    console.error("Error:", chrome.runtime.lastError);
+                    updateTokenPath('Konnte kein Token finden');
+                    return;
+                }
+
+                if (response) {
+                    updateTokenPath(response.tokenDebugPath);
+                    lastTokenOptions = Array.isArray(response.tokenOptions) ? response.tokenOptions : lastTokenOptions;
+                    updateTokenOptions(lastTokenOptions, response.tokenSelectedId);
+
+                    songId = response.songId || songId || '';
+                    songTitle = response.title || songTitle || 'Unknown Title';
+                    artistName = response.artist || artistName || 'Unknown Artist';
+                    if (response.mediaUrls) {
+                        window.mediaUrls = response.mediaUrls;
+                    }
+                }
+
+                if (response && response.lrcContent) {
+                    originalLrcContent = response.lrcContent;
+                    var convertedText = convertLrc(originalLrcContent);
+                    document.getElementById('output').value = convertedText;
+                    showStatus(i18n[currentLang].status_loaded, 'success');
+                } else if (response && response.error === "Not on a song page") {
+                    document.getElementById('output').value = i18n[currentLang].open_song_page;
+                    showStatus(i18n[currentLang].open_song_page, 'info');
+                } else {
+                    document.getElementById('output').value = i18n[currentLang].no_content;
+                    showStatus(i18n[currentLang].no_content, 'error');
+                }
+            });
+        });
+    });
+}
 
 // Button event listeners
 document.getElementById('copyButton').addEventListener('click', copyToClipboard);
@@ -205,10 +348,21 @@ chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
         chrome.tabs.sendMessage(tabs[0].id, {action: "GET_LRC_DATA"}, function(response) {
             if (chrome.runtime.lastError) {
                 console.error("Error:", chrome.runtime.lastError);
-                document.getElementById('output').value = i18n[currentLang].error_loading;
+                var msg = i18n[currentLang].error_loading;
+                var lastErrMsg = chrome.runtime.lastError && chrome.runtime.lastError.message;
+                if (lastErrMsg && lastErrMsg.indexOf('Receiving end does not exist') !== -1) {
+                    msg += "\n\n(ContentScript nicht geladen: bitte Tab neu laden / Seite refreshen)";
+                }
+                document.getElementById('output').value = msg;
+                updateTokenPath('Konnte kein Token finden');
+                updateTokenOptions([], 'auto');
                 showStatus(i18n[currentLang].status_error, 'error');
                 return;
             }
+            
+            updateTokenPath(response && response.tokenDebugPath);
+            lastTokenOptions = (response && Array.isArray(response.tokenOptions)) ? response.tokenOptions : [];
+            updateTokenOptions(lastTokenOptions, response && response.tokenSelectedId);
             
             if (response && response.lrcContent) {
                 originalLrcContent = response.lrcContent;
@@ -289,6 +443,8 @@ chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
     } else {
         document.getElementById('output').value = i18n[currentLang].open_song_page;
         showStatus(i18n[currentLang].open_song_page, 'info');
+        updateTokenPath('Konnte kein Token finden');
+        updateTokenOptions([], 'auto');
     }
 });
 });
@@ -310,7 +466,7 @@ function removeBrackets(text) {
 function cleanLyricsText(text) {
     return text
         .replace(/([\(])\s+/g, '$1') // remove space directly after opening brackets: (
-        .replace(/„ +/g, '„')  // Remove spaces after German quotes
+        .replace(/„ +/g, '„')  // Remove spaces after German opening quotes
         .replace(/" +/g, '"')  // Remove spaces after double quotes
         .replace(/’ +/g, '’')  // Remove spaces after single quotes
         .replace(/\s+/g, ' ')  // Normalize other spaces
@@ -703,3 +859,4 @@ function downloadAllSequence() {
 function showStatus(message, type) {
     console.debug('[Suno Extension] ' + (type || 'info').toUpperCase() + ': ' + (message || ''));
 }
+

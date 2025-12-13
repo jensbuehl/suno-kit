@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -29,13 +29,13 @@
 
         html {
             width: 650px;
-            height: 600px; /* Reduced height to fit without scrolling */
+            height: 600px; /* Increased height so bottom buttons and border are visible */
             overflow: hidden !important;
         }
         
         body {
             width: 650px;
-            height: 600px; /* Reduced height to fit without scrolling */
+            height: 600px; /* Increased height so bottom buttons and border are visible */
             overflow: hidden !important;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
             background: var(--bg-primary);
@@ -52,7 +52,7 @@
             top: 0;
             left: 0;
             width: 650px;
-            height: 600px; /* Reduced height to fit without scrolling */
+            height: 600px; /* Increased height so bottom buttons and border are visible */
             padding: 20px;
             background: var(--bg-primary);
             backdrop-filter: blur(10px);
@@ -153,6 +153,68 @@
             color: var(--text-secondary);
             font-size: 12px;
             font-weight: 400;
+        }
+
+        .token-path {
+            padding: 10px 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+            word-break: normal;
+            flex: 1 1 auto;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .token-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin: 0 0 8px;
+        }
+
+        .token-controls label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .token-controls select {
+            flex: 0 0 220px;
+            max-width: 220px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 8px;
+            padding: 9px 12px;
+            font-size: 11px;
+            outline: none;
+        }
+
+        /* Make token-path visually match the select control */
+        .token-controls .token-path {
+            display: flex;
+            align-items: center;
+            height: 34px; /* match select visual height */
+            padding: 6px 10px;
+            border-radius: 8px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 11px;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .token-controls select:focus {
+            border-color: var(--accent-primary);
         }
 
         /* Options Grid */
@@ -361,8 +423,16 @@
     </div>
 
     <div class="header">
-        <h1 data-i18n="title">LRC zu Lyric Video Konverter 🎤</h1>
+        <h1 data-i18n="title">Fightclub SUNO Tool</h1>
         <p class="subtitle" data-i18n="subtitle">LRC-Inhalt wurde automatisch geladen und kann bearbeitet werden</p>
+    </div>
+
+    <div class="token-controls">
+        <label for="tokenPathSelect" data-i18n="token_path_label">Token Erkennung</label>
+        <select id="tokenPathSelect">
+            <option value="auto">Auto</option>
+        </select>
+        <div class="token-path" id="tokenPathDisplay">Konnte kein Token finden</div>
     </div>
 
     <div class="options">
@@ -416,3 +486,12 @@
 
 </body>
 </html>
+
+
+
+
+
+
+
+
+

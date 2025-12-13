@@ -11,7 +11,10 @@
       "matches": [ "https://suno.com/*" ]
    }],
    "description": "Download lyrics and MP3 files from Suno songs",
-   "host_permissions": [ "https://suno.com/*" ],
+   "host_permissions": [
+      "https://suno.com/*",
+      "https://auth.suno.com/*"
+   ],
    "permissions": [
       "activeTab",
       "tabs",
@@ -34,5 +37,4 @@
       "resources": ["popup.html", "popup.js"],
       "matches": ["<all_urls>"]
    }]
-
 }

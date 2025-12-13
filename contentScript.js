@@ -1,4 +1,4 @@
-(() => {
+﻿(() => {
     var t = {},
         e = {};
 
@@ -231,8 +231,7 @@
 
         return metadata;
     }
-
-    // --- BEGIN: Fallback-Helpers für Bearer Token -------------------------
+    // --- BEGIN: Fallback-Helpers fuer Bearer Token -------------------------
 
     // simple JWT-Erkennung: 3 durch Punkte getrennte Base64-Teile
     function isLikelyJwt(str) {
@@ -258,204 +257,282 @@
         }
     }
 
-    // Holt alle Kandidaten aus Cookies und localStorage, filtert dann auf Access-Token
-    function getBearerTokenFromBrowser() {
-        var candidates = [];
+    function getCookiesViaExtension(domains) {
+        return new Promise(function(resolve) {
+            try {
+                chrome.runtime.sendMessage({
+                    action: "FC_GET_SUNO_COOKIES",
+                    domains: domains
+                }, function(response) {
+                    if (chrome.runtime.lastError || !response || !Array.isArray(response.cookies)) {
+                        console.warn("Konnte Cookies nicht ueber chrome.cookies abrufen", chrome.runtime.lastError);
+                        return resolve([]);
+                    }
+                    resolve(response.cookies);
+                });
+            } catch (err) {
+                console.warn("Fehler beim Anfordern der Cookies via Background", err);
+                resolve([]);
+            }
+        });
+    }
 
-        function addCandidate(value, source) {
-            if (!value) return;
-            if (!isLikelyJwt(value)) return;
-            candidates.push({
-                token: value.trim(),
-                source: source || "unknown"
+    function formatPathResult(pathLabel, source, token) {
+        var suffix = token ? token.slice(-10) : "";
+        return "".concat(pathLabel, ": Der Cookie stammt aus ").concat(source || "unbekannt", token ? " und endet auf #".concat(suffix, "#") : "");
+    }
+
+    function makeCandidateId(candidate) {
+        return "".concat(candidate.path || "Weg ?", "|").concat(candidate.source || "unknown");
+    }
+
+    function fetchAlignedWordsWithToken(songId, bearerToken) {
+        return r(function() {
+            var t, n, o;
+            return a(this, function(r) {
+                switch (r.label) {
+                    case 0:
+                        return r.trys.push([0, 3, , 4]), [4, fetch("".concat("https://studio-api.prod.suno.com/api/gen", "/").concat(songId, "/aligned_lyrics/v2/"), {
+                            headers: {
+                                Authorization: "Bearer ".concat(bearerToken),
+                                "Content-Type": "application/json"
+                            }
+                        })];
+                    case 1:
+                        if (!(n = r.sent()).ok) throw Error("API request failed: ".concat(n.status));
+                        return [4, n.json()];
+                    case 2:
+                        return [2, (null == (t = (o = r.sent()).aligned_words) ? void 0 : t.length) ? o.aligned_words : null];
+                    case 3:
+                        return console.warn("Token-Versuch fehlgeschlagen:", r.sent()), [2, null];
+                    case 4:
+                        return [2]
+                }
+            })
+        })();
+    }
+
+    // Holt alle Kandidaten aus Cookies und localStorage, filtert dann auf Access-Token
+    function getBearerTokenFromBrowser(preferredOptionId) {
+        return r(function() {
+            var candidates, debugText, cookieApiList, preferredId, options, indexById;
+            return a(this, function(step) {
+                switch (step.label) {
+                    case 0:
+                        candidates = [];
+                        debugText = "NO_TOKEN";
+                        preferredId = preferredOptionId && typeof preferredOptionId === "string" ? preferredOptionId : "auto";
+                        return [4, getCookiesViaExtension(["auth.suno.com", ".suno.com", "suno.com"])];
+                    case 1:
+                        cookieApiList = step.sent();
+                        try {
+                            if (Array.isArray(cookieApiList)) {
+                                for (var i = 0; i < cookieApiList.length; i++) {
+                                    var c = cookieApiList[i];
+                                    if (!c || !c.name) continue;
+                                    var nameLower = c.name.toLowerCase();
+                                    if (c.name === "__client" || c.name.indexOf("__client") === 0 || nameLower.indexOf("session") !== -1) {
+                                        if (isLikelyJwt(c.value)) {
+                                            candidates.push({
+                                                token: c.value.trim(),
+                                                source: "cookie-api:".concat(c.domain || "auth.suno.com", "/").concat(c.name),
+                                                path: "Weg 1"
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.warn("Fehler beim Auslesen der chrome.cookies Daten fuer Bearer-Token", e);
+                        }
+
+                        // 2) document.cookie (fuer nicht-HttpOnly Cookies)
+                        try {
+                            var cookieString = document.cookie || "";
+                            if (cookieString) {
+                                var cookiePairs = cookieString.split("; ");
+                                for (var j = 0; j < cookiePairs.length; j++) {
+                                    var parts = cookiePairs[j].split("=");
+                                    var name = parts.shift();
+                                    var value = parts.join("=");
+                                    if (name === "__session") {
+                                        if (isLikelyJwt(value)) {
+                                            candidates.push({
+                                                token: value.trim(),
+                                                source: "cookie:__session",
+                                                path: "Weg 2"
+                                            });
+                                        }
+                                    }
+                                    if (name.indexOf("__client") === 0 || name.toLowerCase().indexOf("session") !== -1) {
+                                        if (isLikelyJwt(value)) {
+                                            candidates.push({
+                                                token: value.trim(),
+                                                source: "cookie:".concat(name),
+                                                path: "Weg 2"
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.warn("Fehler beim Auslesen der Cookies fuer Bearer-Token", e);
+                        }
+
+                        // 3) localStorage nach Clerk-/Suno-bezogenen Daten durchsuchen
+                        try {
+                            for (var l = 0; l < localStorage.length; l++) {
+                                var key = localStorage.key(l);
+                                if (!key) continue;
+                                if (
+                                    key.indexOf("clerk") === -1 &&
+                                    key.indexOf("suno") === -1 &&
+                                    key.toLowerCase().indexOf("auth") === -1 &&
+                                    key.toLowerCase().indexOf("session") === -1
+                                ) {
+                                    continue;
+                                }
+
+                                var raw = localStorage.getItem(key);
+                                if (!raw) continue;
+
+                                if (isLikelyJwt(raw)) {
+                                    candidates.push({
+                                        token: raw.trim(),
+                                        source: "localStorage:".concat(key),
+                                        path: "Weg 3"
+                                    });
+                                }
+
+                                try {
+                                    var obj = JSON.parse(raw);
+                                    (function walk(o) {
+                                        if (!o) return;
+                                        if (typeof o === "string") {
+                                            if (isLikelyJwt(o)) {
+                                                candidates.push({
+                                                    token: o.trim(),
+                                                    source: "localStorage:".concat(key),
+                                                    path: "Weg 3"
+                                                });
+                                            }
+                                        } else if (typeof o === "object") {
+                                            for (var prop in o) {
+                                                if (!Object.prototype.hasOwnProperty.call(o, prop)) continue;
+                                                walk(o[prop]);
+                                            }
+                                        }
+                                    })(obj);
+                                } catch (e) {}
+                            }
+                        } catch (e) {
+                            console.warn("Fehler beim Auslesen von localStorage fuer Bearer-Token", e);
+                        }
+
+                        options = [];
+                        indexById = {};
+                        for (var optI = 0; optI < candidates.length; optI++) {
+                            var id = makeCandidateId(candidates[optI]);
+                            if (indexById[id]) continue;
+                            indexById[id] = options.length + 1;
+                            options.push({
+                                id: id,
+                                label: "Weg ".concat(indexById[id]),
+                                index: indexById[id]
+                            });
+                        }
+
+                        if (!candidates.length) {
+                            console.warn("Kein JWT-Kandidat in Cookies/localStorage gefunden");
+                            return [2, { candidates: [], debug: debugText, options: options, indexById: indexById }];
+                        }
+
+                        return [2, { candidates: candidates, debug: debugText, options: options, indexById: indexById }];
+                }
+            });
+        })();
+    }
+
+    // --- END: Fallback-Helpers fuer Bearer Token -------------------------
+
+    async function s(preferredOptionId) {
+        var songId = window.location.pathname.split("/").pop() || "";
+        var preferredId = preferredOptionId && typeof preferredOptionId === "string" ? preferredOptionId : "auto";
+
+        if (!songId) {
+            console.error("Could not extract song ID from URL");
+            return { songId: null, lrcContent: null, tokenDebugPath: "NO_TOKEN", tokenOptions: [], tokenSelectedId: preferredId };
+        }
+
+        var metadata = extractSongMetadata();
+        console.log("Extracted metadata:", metadata);
+
+        var tokenInfo = await getBearerTokenFromBrowser(preferredId);
+        var options = (tokenInfo && tokenInfo.options) || [];
+        var indexById = (tokenInfo && tokenInfo.indexById) || {};
+        var candidates = (tokenInfo && tokenInfo.candidates) || [];
+        var tokenDebugPath = "Konnte kein Token finden";
+
+        var candidatesToTry = [];
+        if (candidates.length) {
+            if (preferredId !== "auto") {
+                var found = candidates.find(function(c) { return makeCandidateId(c) === preferredId; });
+                candidatesToTry = found ? [found] : candidates.slice();
+            } else {
+                candidatesToTry = candidates.slice();
+            }
+        }
+        if (candidatesToTry.length > 1) {
+            var seen = {};
+            candidatesToTry = candidatesToTry.filter(function(c) {
+                var id = makeCandidateId(c);
+                if (seen[id]) return false;
+                seen[id] = true;
+                return true;
             });
         }
 
-        // 1) Cookies durchsuchen
-        try {
-            var cookieString = document.cookie || "";
-            if (cookieString) {
-                var cookiePairs = cookieString.split("; ");
-                for (var i = 0; i < cookiePairs.length; i++) {
-                    var parts = cookiePairs[i].split("=");
-                    var name = parts.shift();
-                    var value = parts.join("=");
+        // Auto: erster Weg, der wirklich Lyrics liefert
+        for (var i = 0; i < candidatesToTry.length; i++) {
+            var candidate = candidatesToTry[i];
+            var alignedWords = await fetchAlignedWordsWithToken(songId, candidate.token);
+            if (!alignedWords || !alignedWords.length) continue;
 
-                    // alte Variante: __session
-                    if (name === "__session") {
-                        addCandidate(value, "cookie:__session");
-                    }
+            var chosenId = makeCandidateId(candidate);
+            var chosenIdx = indexById[chosenId] || "?";
+            tokenDebugPath = formatPathResult("Weg ".concat(chosenIdx), candidate.source, candidate.token);
 
-                    // neue Suno/Clerk-Cookies: __client, __client_*, evtl. *session*
-                    if (name.indexOf("__client") === 0 || name.toLowerCase().indexOf("session") !== -1) {
-                        addCandidate(value, "cookie:" + name);
-                    }
-                }
-            }
-        } catch (e) {
-            console.warn("Fehler beim Auslesen der Cookies für Bearer-Token", e);
+            return {
+                songId: songId,
+                title: metadata.title,
+                artist: metadata.artist,
+                mediaUrls: metadata.mediaUrls,
+                tokenDebugPath: tokenDebugPath,
+                tokenOptions: options,
+                tokenSelectedId: preferredId,
+                lrcContent: alignedWords.map(function(t) {
+                    var e, n, o, r;
+                    var timestamp = (n = Math.floor((e = t.start_s) / 60), o = Math.floor(e % 60), r = Math.floor(e % 1 * 100), "[".concat(n.toString().padStart(2, "0"), ":").concat(o.toString().padStart(2, "0"), ".").concat(r.toString().padStart(2, "0"), "]"));
+                    var word = t.word.replace(/```math\s*/g, '[').replace(/\s*```/g, ']').replace(/KATEX_INLINE_OPEN\s*/g, '(').replace(/\s*KATEX_INLINE_CLOSE/g, ')');
+                    return timestamp.concat(word);
+                }).join("\n")
+            };
         }
 
-        // 2) localStorage nach Clerk-/Suno-bezogenen Daten durchsuchen
-        try {
-            for (var j = 0; j < localStorage.length; j++) {
-                var key = localStorage.key(j);
-                if (!key) continue;
-
-                // nur Keys, die nach Auth aussehen
-                if (
-                    key.indexOf("clerk") === -1 &&
-                    key.indexOf("suno") === -1 &&
-                    key.toLowerCase().indexOf("auth") === -1 &&
-                    key.toLowerCase().indexOf("session") === -1
-                ) {
-                    continue;
-                }
-
-                var raw = localStorage.getItem(key);
-                if (!raw) continue;
-
-                // a) evtl. JWT direkt als String gespeichert
-                addCandidate(raw, "localStorage:" + key);
-
-                // b) JSON geparst und rekursiv nach Strings/JWTs suchen
-                try {
-                    var obj = JSON.parse(raw);
-
-                    (function walk(o) {
-                        if (!o) return;
-                        if (typeof o === "string") {
-                            addCandidate(o, "localStorage:" + key);
-                        } else if (typeof o === "object") {
-                            for (var prop in o) {
-                                if (!Object.prototype.hasOwnProperty.call(o, prop)) continue;
-                                walk(o[prop]);
-                            }
-                        }
-                    })(obj);
-                } catch (e) {
-                    // nicht schlimm, wenn es kein JSON ist
-                }
-            }
-        } catch (e) {
-            console.warn("Fehler beim Auslesen von localStorage für Bearer-Token", e);
+        if (options.length) {
+            tokenDebugPath = preferredId === "auto" ? "Auto: Kein Weg hat Lyrics geliefert" : "Auswahl: Kein Weg hat Lyrics geliefert";
         }
 
-        if (!candidates.length) {
-            console.warn("Kein JWT-Kandidat in Cookies/localStorage gefunden");
-            return null;
-        }
-
-        // 3) Den besten Kandidaten auswählen: Access-Token mit passendem Audience
-        var bestToken = null;
-
-        for (var k = 0; k < candidates.length; k++) {
-            var payload = decodeJwtPayload(candidates[k].token);
-            if (!payload) continue;
-
-            var tokenType = payload.token_type || payload.typ || "";
-            var aud = payload.aud || "";
-
-            // bevorzugt: access token + aud zeigt auf suno/studio API
-            if (
-                (tokenType === "access" || tokenType === "Bearer" || tokenType === "bearer") &&
-                (aud === "suno-api" || aud === "studio-api" || aud === "suno-api-prod")
-            ) {
-                bestToken = candidates[k];
-                break;
-            }
-        }
-
-        // falls kein "perfekter" Treffer: nimm den ersten Kandidaten
-        if (!bestToken && candidates.length) {
-            bestToken = candidates[0];
-        }
-
-        if (bestToken) {
-            console.log("Verwende Bearer Token aus:", bestToken.source);
-            return bestToken.token;
-        }
-
-        return null;
-    }
-
-    // --- END: Fallback-Helpers für Bearer Token -------------------------
-
-    function s() {
-        return r(function() {
-            var t, e, n, i;
-            return a(this, function(o) {
-                switch (o.label) {
-                    case 0:
-                        var u;
-                        if (!(t = window.location.pathname.split("/").pop() || "")) {
-                            console.error("Could not extract song ID from URL");
-                            return [2, { songId: null, lrcContent: null }];
-                        }
-
-                        // Extract metadata
-                        i = extractSongMetadata();
-                        console.log("Extracted metadata:", i);
-
-                        // Versuche Bearer-Token aus Cookies + localStorage zu ziehen
-                        e = getBearerTokenFromBrowser();
-                        if (!e) {
-                            console.error("Kein Bearer-Token in Cookies/localStorage gefunden – Lyrics werden nicht geladen.");
-                            // Gib trotzdem Song-ID + Metadaten zurück, aber ohne lrcContent
-                            return [2, {
-                                songId: t,
-                                title: i.title,
-                                artist: i.artist,
-                                mediaUrls: i.mediaUrls,
-                                lrcContent: null
-                            }];
-                        }
-
-                        return [4, (u = t, r(function() {
-                            var t, n, o;
-                            return a(this, function(r) {
-                                switch (r.label) {
-                                    case 0:
-                                        return r.trys.push([0, 3, , 4]), [4, fetch("".concat("https://studio-api.prod.suno.com/api/gen", "/").concat(u, "/aligned_lyrics/v2/"), {
-                                            headers: {
-                                                Authorization: "Bearer ".concat(e),
-                                                "Content-Type": "application/json"
-                                            }
-                                        })];
-                                    case 1:
-                                        if (!(n = r.sent()).ok) throw Error("API request failed: ".concat(n.status));
-                                        return [4, n.json()];
-                                    case 2:
-                                        return [2, (null == (t = (o = r.sent()).aligned_words) ? void 0 : t.length) ? o.aligned_words : null];
-                                    case 3:
-                                        return console.error("Error fetching aligned words:", r.sent()), [2, null];
-                                    case 4:
-                                        return [2]
-                                }
-                            })
-                        })())];
-                    case 1:
-                        return (n = o.sent()) ? [2, {
-                            songId: t,
-                            title: i.title,
-                            artist: i.artist,
-                            mediaUrls: i.mediaUrls,
-                            lrcContent: n.map(function(t) {
-                                var e, n, o, r;
-                                var timestamp = (n = Math.floor((e = t.start_s) / 60), o = Math.floor(e % 60), r = Math.floor(e % 1 * 100), "[".concat(n.toString().padStart(2, "0"), ":").concat(o.toString().padStart(2, "0"), ".").concat(r.toString().padStart(2, "0"), "]"));
-                                var word = t.word.replace(/```math\s*/g, '[').replace(/\s*```/g, ']').replace(/KATEX_INLINE_OPEN\s*/g, '(').replace(/\s*KATEX_INLINE_CLOSE/g, ')');
-                                return timestamp.concat(word);
-                            }).join("\n")
-                        }] : [2, {
-                            songId: t,
-                            title: i.title,
-                            artist: i.artist,
-                            mediaUrls: i.mediaUrls,
-                            lrcContent: null
-                        }]
-                }
-            })
-        })()
+        return {
+            songId: songId,
+            title: metadata.title,
+            artist: metadata.artist,
+            mediaUrls: metadata.mediaUrls,
+            tokenDebugPath: tokenDebugPath,
+            tokenOptions: options,
+            tokenSelectedId: preferredId,
+            lrcContent: null
+        };
     }
 
     n.rv = () => "1.4.11", n.ruid = "bundler=rspack@1.4.11";
@@ -467,7 +544,7 @@
         if (request.action === "GET_LRC_DATA") {
             // Check if we're on a song page
             if (window.location.pathname.startsWith("/song/")) {
-                s().then(function(result) {
+                s(request && request.tokenOptionId).then(function(result) {
                     console.log("Sending response to popup with data:", {
                         songId: result.songId,
                         hasTitle: !!result.title,
@@ -479,15 +556,19 @@
                 });
                 return true; // Keep the message channel open for async response
             } else {
-                sendResponse({
-                    songId: null,
-                    lrcContent: null,
-                    mediaUrls: null,
-                    error: "Not on a song page"
-                });
-            }
+                    sendResponse({
+                        songId: null,
+                        lrcContent: null,
+                        mediaUrls: null,
+                        tokenDebugPath: "NO_TOKEN",
+                        tokenOptions: [],
+                        tokenSelectedId: "auto",
+                        error: "Not on a song page"
+                    });
+                }
         }
 
         return false;
     });
 })();
+
