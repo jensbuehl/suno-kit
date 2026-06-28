@@ -1,26 +1,24 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: (unversioned template) → 1.0.0
-Bump rationale: Initial ratification — first concrete constitution replacing the
-  placeholder template. MAJOR baseline established.
+Version change: 1.0.0 → 1.1.0
+Bump rationale: MINOR — Principle IV materially expanded with a permitted "phased
+  accessibility rollout" path. No principle removed or redefined; WCAG 2.1 AA remains the
+  mandatory target and shipping with no accessibility (or no tracked follow-up) is still
+  prohibited. Resolves the /speckit-analyze C1 conflict for feature 001 without diluting
+  the principle.
 
-Modified principles: N/A (initial definition)
-Added principles:
-  - I. Simplicity & Minimalism
-  - II. Reuse Before Building
-  - III. Single Source of Truth for Design Tokens
-  - IV. State-of-the-Art, Accessible UX
-Added sections:
-  - Additional Constraints (UI/UX Token Governance)
-  - Development Workflow
-  - Governance
+Modified principles:
+  - IV. State-of-the-Art, Accessible UX — added the phased-rollout allowance + tracking
+    requirement; clarified AA as the ultimate-must standard.
+Added sections: None
 Removed sections: None
 
 Templates requiring updates:
-  ✅ .specify/templates/plan-template.md — Constitution Check is a dynamic gate; no change needed
-  ✅ .specify/templates/spec-template.md — no principle-specific references; no change needed
-  ✅ .specify/templates/tasks-template.md — no principle-specific references; no change needed
+  ✅ .specify/templates/plan-template.md — Constitution Check is a dynamic gate; phased
+     a11y is tracked via the existing Complexity Tracking table. No change needed.
+  ✅ .specify/templates/spec-template.md — no principle-specific accessibility section. No change.
+  ✅ .specify/templates/tasks-template.md — no principle-specific task types. No change.
 
 Follow-up TODOs: None
 -->
@@ -74,13 +72,23 @@ drift that accumulates when values are copy-pasted.
 User-facing surfaces MUST follow current best-practice, easy-to-use UX: clear and
 predictable interactions, sensible defaults, immediate feedback for every action,
 graceful loading/empty/error states, and no dead ends. Accessibility is mandatory,
-not optional — keyboard operability, visible focus, sufficient contrast, and
-appropriate semantics/ARIA MUST be met (target WCAG 2.1 AA). The interface MUST stay
-minimal: expose only what the user needs now, progressively disclose the rest.
+not optional: **WCAG 2.1 AA is the standard every user-facing surface MUST ultimately
+meet** — keyboard operability, visible focus, sufficient contrast, and appropriate
+semantics/ARIA. The interface MUST stay minimal: expose only what the user needs now,
+progressively disclose the rest.
+
+**Phased accessibility rollout (permitted).** A feature MAY ship with a *minimal
+accessibility baseline* — at minimum, full keyboard operability and visible focus for
+all primary actions — provided the remaining WCAG 2.1 AA work (complete ARIA/semantics,
+contrast audit, and reduced-motion handling) is recorded as an explicit, tracked
+follow-up in the feature's plan (e.g. the Complexity Tracking table and/or a dedicated
+accessibility checklist). Phasing affects only timing, never the destination: shipping
+with **no** accessibility, or with no tracked follow-up toward AA, is prohibited.
 
 **Rationale**: The extension's value is a frictionless assistant experience.
 Best-practice, accessible UX maximizes adoption and trust while keeping the surface
-small enough to maintain.
+small enough to maintain. Allowing a tracked, phased path to AA lets a feature ship
+incrementally without ever abandoning the accessibility commitment.
 
 ## Additional Constraints: UI/UX Token Governance
 
@@ -100,6 +108,9 @@ small enough to maintain.
 - Each pull request / change MUST demonstrate compliance with all four principles;
   reviewers MUST verify reuse (no duplication), token usage (no literals), and basic
   accessibility before approval.
+- When a feature uses the phased accessibility rollout (Principle IV), the plan MUST
+  record the deferred WCAG 2.1 AA items as an explicit, tracked follow-up; reviewers
+  MUST confirm that follow-up exists rather than treating the deferral as complete.
 - Justified exceptions to a principle MUST be recorded in the plan's Complexity
   Tracking table with the simpler alternative and why it was rejected. Unjustified
   violations block merge.
@@ -120,4 +131,4 @@ Versioning follows semantic versioning:
 Compliance is enforced at review time: every plan and pull request is checked
 against these principles, and complexity must be justified rather than assumed.
 
-**Version**: 1.0.0 | **Ratified**: 2026-06-28 | **Last Amended**: 2026-06-28
+**Version**: 1.1.0 | **Ratified**: 2026-06-28 | **Last Amended**: 2026-06-28

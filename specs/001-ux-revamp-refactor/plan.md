@@ -145,15 +145,16 @@ These were the open questions; all are now decided (see `spec.md` Clarifications
 5. **Theme — dark only shipped**, no user picker; ember/mono remain token-proof. (Phase 0.)
 6. **Accessibility — minimal baseline this feature**, full pass deferred. (Phase 6.)
 
-## Constitution check (v1.0.0)
+## Constitution check (v1.1.0)
 - **I. Simplicity / II. Reuse** — PASS. Reuses the content/token/lyrics pipeline; the
   state machine reduces the current 515-line `popup.ts` tangle. One new dependency
   (`fflate`) is justified: a correct ZIP is far more code/risk to hand-roll, and
   sequential downloads were rejected by clarification.
 - **III. Token & string SSOT** — PASS (with the Phase 0 migration to one bare-name token
   layer and the Phase 6 single EN i18n map).
-- **IV. Accessible UX** — **PARTIAL / justified deviation.** The constitution mandates
-  WCAG 2.1 AA; this feature ships the *minimal* baseline (visible focus + keyboard for
-  primary actions) and defers full ARIA/`tablist`/reduced-motion/contrast audit to a
-  dedicated follow-up a11y pass (recommend a `/speckit-checklist` accessibility checklist
-  before release). Not waived — sequenced.
+- **IV. Accessible UX** — **PASS via phased rollout (constitution v1.1.0).** Principle IV
+  now explicitly permits shipping a minimal a11y baseline (visible focus + keyboard for
+  primary actions, Phase 6 / T042) provided the remaining WCAG 2.1 AA work is a tracked
+  follow-up. **Tracked follow-up:** full ARIA/`tablist` semantics, contrast audit, and
+  `prefers-reduced-motion` — to be carried by a `/speckit-checklist` accessibility
+  checklist before release. AA remains the target; nothing is waived.

@@ -66,7 +66,9 @@ a component runtime for prototyping only; **do not** port that runtime — port 
    checklist of what to include and a live count/size on the button.
 6. **Explicit Empty / Loading / Error states** the current popup lacks.
 7. **Centralized, themeable tokens** — all colours/type/spacing live in `design/theme.css`;
-   components reference `var(--sc-*)` only, so themes swap by overriding one block.
+   components reference the bare tokens (`var(--accent)`, `var(--bg-app)`, …) only, so
+   themes swap by overriding one block. (Canonical naming is bare, not `--sc-` — see spec
+   Clarifications.)
 8. **English-only** — the DE/EN toggle is removed (EN is the default).
 
 See `spec.md` for the precise definition of each.

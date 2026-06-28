@@ -136,8 +136,10 @@ Row, `14px 16px`, `gap 12px`.
 - Sizes/names shown are illustrative — populate from real `Content-Length` / blobs.
 - **Packaging:** fetch the selected asset blobs in the popup and build a single real
   `.zip` client-side with **fflate** (~8 KB, zero-dep) — not sequential downloads.
-  Only checked items are included; an asset whose fetch fails is skipped (see §3.2
-  edge handling) rather than aborting the whole archive.
+  Only checked items are included; an asset whose fetch fails is skipped (see §8 edge
+  handling) rather than aborting the whole archive.
+- **Lyrics in the ZIP:** the Lyrics item is always the **raw timed `.lrc`** (timestamps
+  retained) for portability, independent of the lyrics-toolbar state (Timestamps/Clean/case).
 
 ### 3.3 Tabs
 Row of 4 equal buttons, `0 16px 12px`, bottom border. Icon + label, 12px/600.
