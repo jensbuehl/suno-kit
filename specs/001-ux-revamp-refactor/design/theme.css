@@ -1,0 +1,97 @@
+/* ============================================================================
+ * SUNO Copilot — Design Tokens (single source of truth)
+ * ----------------------------------------------------------------------------
+ * Centralize ALL theme values here. Every component must reference these vars
+ * (var(--sc-*)) and never hard-code a hex / px literal. Re-theming = override
+ * one block; nothing in the components changes.
+ *
+ * In the extension, fold these into popup.css's :root (it already defines a few
+ * tokens like --accent-primary). Keep ONE token layer — don't run a parallel set.
+ *
+ * Switch theme at runtime by setting  data-sc-theme="ember|mono"  on a root
+ * element (e.g. <body> or the popup container). Default (no attr) = dark.
+ *
+ * NOTE: CSS custom properties work in `style`/CSS but NOT inside SVG
+ * presentation attributes (fill="..."/stroke="..."). For themeable icons, set
+ * stroke/fill="currentColor" and drive `color` from a token on a parent.
+ * ========================================================================== */
+
+:root,
+[data-sc-theme="dark"] {
+  /* — Surfaces — */
+  --sc-backdrop:        #0e0e10;  /* page/behind-popup */
+  --sc-bg-app:          #1a1a1d;  /* popup background */
+  --sc-bg-sunken:       #161618;  /* lyrics box, panels, footer, inputs */
+  --sc-bg-raised:       #242426;  /* controls, chips, ghost buttons */
+  --sc-skeleton-hi:     #303033;  /* skeleton shimmer highlight */
+
+  /* — Borders — */
+  --sc-border:          #2a2a2e;  /* section dividers */
+  --sc-border-control:  #38383c;  /* control outlines */
+  --sc-border-strong:   #45454a;  /* hover/active outlines, scrollbar */
+
+  /* — Accent — */
+  --sc-accent:          #E03C31;  /* primary actions, active states, timestamps */
+  --sc-accent-deep:     #7d1812;  /* gradient mid (cover/icon tile) */
+  --sc-accent-deeper:   #3a1412;  /* gradient base */
+  --sc-accent-text:     #ff6a5f;  /* text on accent-weak fills */
+  --sc-accent-weak-bg:  rgba(224,60,49,.16); /* active pill fill */
+  --sc-accent-glow:     rgba(224,60,49,.18); /* focus ring / icon-tile shadow */
+  --sc-accent-tint:     rgba(224,60,49,.12); /* error circle fill */
+  --sc-accent-tint-bd:  rgba(224,60,49,.4);  /* error circle border, video glow */
+  --sc-on-accent:       #fff;     /* text/icons on solid accent */
+
+  /* — Text — */
+  --sc-text:            #fafafa;  /* primary */
+  --sc-text-2:          #e6e6ea;  /* lyric body, list labels */
+  --sc-text-3:          #b5b5b5;  /* secondary */
+  --sc-text-mut:        #6e6e72;  /* meta, mono captions, footer */
+
+  /* — Status — */
+  --sc-ok:              #3fbf6b;  /* connected indicator */
+
+  /* — Radii — */
+  --sc-r-control: 8px;
+  --sc-r-card:    11px;
+  --sc-r-input:   9px;
+  --sc-r-popup:   16px;
+  --sc-r-pill:    999px;
+
+  /* — Spacing — */
+  --sc-pad-card:   14px;
+  --sc-gutter:     16px;
+  --sc-gap:        8px;
+  --sc-gap-tight:  6px;
+
+  /* — Type — */
+  --sc-font-ui:    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --sc-font-brand: "Space Grotesk", var(--sc-font-ui);
+  --sc-font-mono:  "JetBrains Mono", Consolas, monospace;
+
+  /* — Elevation — */
+  --sc-shadow-popup: 0 24px 60px rgba(0,0,0,.55);
+  --sc-shadow-card:  0 4px 12px rgba(0,0,0,.4);
+}
+
+/* ===== Alternate theme: Ember (warm orange) =============================== */
+[data-sc-theme="ember"] {
+  --sc-backdrop:#100a06; --sc-bg-app:#1c1611; --sc-bg-sunken:#171109; --sc-bg-raised:#2a2016;
+  --sc-skeleton-hi:#352a1d; --sc-border:#2e2418; --sc-border-control:#3d3022; --sc-border-strong:#4d3d2a;
+  --sc-accent:#f7861f; --sc-accent-deep:#8a3d0c; --sc-accent-deeper:#3a1c08; --sc-accent-text:#ffae5c;
+  --sc-accent-weak-bg:rgba(247,134,31,.16); --sc-accent-glow:rgba(247,134,31,.18);
+  --sc-accent-tint:rgba(247,134,31,.12); --sc-accent-tint-bd:rgba(247,134,31,.4); --sc-on-accent:#fff;
+  --sc-text:#fbf7f2; --sc-text-2:#ece4da; --sc-text-3:#bcae9e; --sc-text-mut:#7a6c5a; --sc-ok:#4fc06b;
+}
+
+/* ===== Alternate theme: Mono (cool slate / indigo accent) ================= */
+[data-sc-theme="mono"] {
+  --sc-backdrop:#0c0d0f; --sc-bg-app:#17181b; --sc-bg-sunken:#131417; --sc-bg-raised:#212327;
+  --sc-skeleton-hi:#2c2f34; --sc-border:#26282c; --sc-border-control:#33363b; --sc-border-strong:#42464c;
+  --sc-accent:#7c8cff; --sc-accent-deep:#2b3380; --sc-accent-deeper:#171a33; --sc-accent-text:#a6b1ff;
+  --sc-accent-weak-bg:rgba(124,140,255,.16); --sc-accent-glow:rgba(124,140,255,.18);
+  --sc-accent-tint:rgba(124,140,255,.12); --sc-accent-tint-bd:rgba(124,140,255,.4); --sc-on-accent:#fff;
+  --sc-text:#f4f5f7; --sc-text-2:#e2e4e9; --sc-text-3:#b3b7c0; --sc-text-mut:#6c7079; --sc-ok:#46c08a;
+}
+
+/* The dark, ember, and mono blocks above are proof that re-theming touches
+ * exactly one block. Add a light theme the same way (override the same names). */

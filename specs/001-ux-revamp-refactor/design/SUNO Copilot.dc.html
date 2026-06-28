@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ===== Centralized design tokens — swap a block to retheme ===== */
+  :root, [data-sc-theme="dark"]{
+    --sc-backdrop:#0e0e10; --sc-bg-app:#1a1a1d; --sc-bg-sunken:#161618; --sc-bg-raised:#242426;
+    --sc-skeleton-hi:#303033; --sc-border:#2a2a2e; --sc-border-control:#38383c; --sc-border-strong:#45454a;
+    --sc-accent:#E03C31; --sc-accent-deep:#7d1812; --sc-accent-deeper:#3a1412; --sc-accent-text:#ff6a5f;
+    --sc-accent-weak-bg:rgba(224,60,49,.16); --sc-accent-glow:rgba(224,60,49,.18);
+    --sc-accent-tint:rgba(224,60,49,.12); --sc-accent-tint-bd:rgba(224,60,49,.4); --sc-on-accent:#fff;
+    --sc-text:#fafafa; --sc-text-2:#e6e6ea; --sc-text-3:#b5b5b5; --sc-text-mut:#6e6e72; --sc-ok:#3fbf6b;
+  }
+  [data-sc-theme="ember"]{
+    --sc-backdrop:#100a06; --sc-bg-app:#1c1611; --sc-bg-sunken:#171109; --sc-bg-raised:#2a2016;
+    --sc-skeleton-hi:#352a1d; --sc-border:#2e2418; --sc-border-control:#3d3022; --sc-border-strong:#4d3d2a;
+    --sc-accent:#f7861f; --sc-accent-deep:#8a3d0c; --sc-accent-deeper:#3a1c08; --sc-accent-text:#ffae5c;
+    --sc-accent-weak-bg:rgba(247,134,31,.16); --sc-accent-glow:rgba(247,134,31,.18);
+    --sc-accent-tint:rgba(247,134,31,.12); --sc-accent-tint-bd:rgba(247,134,31,.4); --sc-on-accent:#fff;
+    --sc-text:#fbf7f2; --sc-text-2:#ece4da; --sc-text-3:#bcae9e; --sc-text-mut:#7a6c5a; --sc-ok:#4fc06b;
+  }
+  [data-sc-theme="mono"]{
+    --sc-backdrop:#0c0d0f; --sc-bg-app:#17181b; --sc-bg-sunken:#131417; --sc-bg-raised:#212327;
+    --sc-skeleton-hi:#2c2f34; --sc-border:#26282c; --sc-border-control:#33363b; --sc-border-strong:#42464c;
+    --sc-accent:#7c8cff; --sc-accent-deep:#2b3380; --sc-accent-deeper:#171a33; --sc-accent-text:#a6b1ff;
+    --sc-accent-weak-bg:rgba(124,140,255,.16); --sc-accent-glow:rgba(124,140,255,.18);
+    --sc-accent-tint:rgba(124,140,255,.12); --sc-accent-tint-bd:rgba(124,140,255,.4); --sc-on-accent:#fff;
+    --sc-text:#f4f5f7; --sc-text-2:#e2e4e9; --sc-text-3:#b3b7c0; --sc-text-mut:#6c7079; --sc-ok:#46c08a;
+  }
+  @keyframes scShimmer { 0% { background-position: -300px 0; } 100% { background-position: 300px 0; } }
+  .sc-skel { background: linear-gradient(90deg, var(--sc-bg-raised) 0%, var(--sc-skeleton-hi) 50%, var(--sc-bg-raised) 100%); background-size: 600px 100%; animation: scShimmer 1.2s infinite linear; border-radius: 6px; }
+  .sc-scroll::-webkit-scrollbar { width: 6px; }
+  .sc-scroll::-webkit-scrollbar-track { background: transparent; }
+  .sc-scroll::-webkit-scrollbar-thumb { background: var(--sc-border-strong); border-radius: 3px; }
+  .sc-scroll::-webkit-scrollbar-thumb:hover { background: var(--sc-accent); }
+</style>
+</helmet>
+
+<div data-sc-theme="{{ themeName }}" style="min-height:100vh; background:var(--sc-backdrop); background-image: radial-gradient(circle at 30% 0%, var(--sc-bg-app) 0%, var(--sc-backdrop) 60%); display:flex; flex-direction:column; align-items:center; padding:28px 20px 60px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+
+  <!-- Demo state switcher (staging only) -->
+  <div style="display:flex; align-items:center; gap:10px; margin-bottom:22px; padding:8px 8px 8px 14px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:999px;">
+    <span style="font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--sc-text-mut); font-weight:600;">Demo state</span>
+    <div style="display:flex; gap:4px;">
+      <button onClick="{{ view_loaded }}" style="border:none; cursor:pointer; font-size:12px; font-weight:600; padding:6px 12px; border-radius:999px; color:var(--sc-text-2); background:transparent; {{ chipLoaded }}">Loaded</button>
+      <button onClick="{{ view_empty }}" style="border:none; cursor:pointer; font-size:12px; font-weight:600; padding:6px 12px; border-radius:999px; color:var(--sc-text-2); background:transparent; {{ chipEmpty }}">Empty</button>
+      <button onClick="{{ view_loading }}" style="border:none; cursor:pointer; font-size:12px; font-weight:600; padding:6px 12px; border-radius:999px; color:var(--sc-text-2); background:transparent; {{ chipLoading }}">Loading</button>
+      <button onClick="{{ view_error }}" style="border:none; cursor:pointer; font-size:12px; font-weight:600; padding:6px 12px; border-radius:999px; color:var(--sc-text-2); background:transparent; {{ chipError }}">Token error</button>
+    </div>
+    <div style="width:1px; height:18px; background:var(--sc-border-control); opacity:.7;"></div>
+    <span style="font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--sc-text-mut); font-weight:600;">Theme</span>
+    <div style="display:flex; gap:4px;">
+      <button onClick="{{ theme_dark }}" style="border:none; cursor:pointer; font-size:12px; font-weight:600; padding:6px 12px; border-radius:999px; color:var(--sc-text-2); background:transparent; {{ themeDark }}">Dark</button>
+      <button onClick="{{ theme_ember }}" style="border:none; cursor:pointer; font-size:12px; font-weight:600; padding:6px 12px; border-radius:999px; color:var(--sc-text-2); background:transparent; {{ themeEmber }}">Ember</button>
+      <button onClick="{{ theme_mono }}" style="border:none; cursor:pointer; font-size:12px; font-weight:600; padding:6px 12px; border-radius:999px; color:var(--sc-text-2); background:transparent; {{ themeMono }}">Mono</button>
+    </div>
+  </div>
+
+  <!-- Faux browser anchor -->
+  <div style="width:420px; max-width:100%; position:relative;">
+    <div style="display:flex; justify-content:flex-end; padding-right:18px; margin-bottom:-1px;">
+      <div style="width:32px; height:32px; border-radius:8px; background:var(--sc-bg-raised); border:1px solid var(--sc-border-control); display:flex; align-items:center; justify-content:center;">
+        <div style="width:16px; height:16px; border-radius:5px; background:linear-gradient(135deg,var(--sc-accent),var(--sc-accent-deep)); box-shadow:0 0 0 3px var(--sc-accent-glow);"></div>
+      </div>
+    </div>
+    <div style="display:flex; justify-content:flex-end; padding-right:30px;">
+      <div style="width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent; border-bottom:8px solid var(--sc-bg-app);"></div>
+    </div>
+
+    <!-- ============ POPUP ============ -->
+    <div style="width:420px; background:var(--sc-bg-app); border:1px solid var(--sc-border-control); border-radius:16px; box-shadow:0 24px 60px rgba(0,0,0,.55); overflow:hidden; display:flex; flex-direction:column;">
+
+      <!-- Top bar -->
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--sc-border);">
+        <div style="display:flex; align-items:center; gap:9px;">
+          <div style="width:22px; height:22px; border-radius:6px; background:linear-gradient(135deg,var(--sc-accent),var(--sc-accent-deep)); display:flex; align-items:center; justify-content:center;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M9 18V5l11-2v13" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="18" r="3" stroke="#fff" stroke-width="2.2"/><circle cx="17" cy="16" r="3" stroke="#fff" stroke-width="2.2"/></svg>
+          </div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px; letter-spacing:-.01em; color:var(--sc-text);">SUNO <span style="color:var(--sc-accent);">Copilot</span></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button onClick="{{ togglePaste }}" title="Add from link" style="cursor:pointer; width:30px; height:30px; border-radius:8px; background:transparent; border:1px solid var(--sc-border-control); color:var(--sc-text-3); display:flex; align-items:center; justify-content:center; {{ pasteBtnActive }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 8.5v7M8.5 12h7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Paste-from-link row (collapsible) -->
+      <sc-if value="{{ pasteOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; gap:8px; padding:12px 16px; background:var(--sc-bg-sunken); border-bottom:1px solid var(--sc-border);">
+          <input placeholder="{{ t.pastePlaceholder }}" style="flex:1; min-width:0; background:var(--sc-bg-raised); border:1px solid var(--sc-border-control); border-radius:9px; padding:9px 12px; font-size:12px; color:var(--sc-text); outline:none;" />
+          <button style="cursor:pointer; border:none; background:var(--sc-accent); color:var(--sc-on-accent); font-weight:700; font-size:12px; padding:0 16px; border-radius:9px;">{{ t.load }}</button>
+        </div>
+      </sc-if>
+
+      <!-- ===== MAIN (loaded) ===== -->
+      <sc-if value="{{ isLoaded }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <!-- Source card -->
+          <div style="display:flex; align-items:center; gap:12px; padding:14px 16px;">
+            <div style="width:52px; height:52px; border-radius:9px; flex:none; background:linear-gradient(135deg,var(--sc-accent-deeper),var(--sc-accent) 120%); position:relative; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,.4);">
+              <div style="position:absolute; inset:0; background-image:radial-gradient(circle at 70% 30%, rgba(255,255,255,.25), transparent 50%);"></div>
+              <div style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:14px; height:14px; border-radius:50%; background:var(--sc-backdrop); border:3px solid rgba(255,255,255,.55);"></div>
+            </div>
+            <div style="flex:1; min-width:0;">
+              <div style="font-size:14px; font-weight:600; color:var(--sc-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Airport</div>
+              <div style="font-size:12px; color:var(--sc-text-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px;">by lukas.makesnoise</div>
+              <div style="display:flex; align-items:center; gap:8px; margin-top:5px;">
+                <span style="font-size:10.5px; font-family:'JetBrains Mono',monospace; color:var(--sc-text-mut);">2:31</span>
+                <span style="width:3px; height:3px; border-radius:50%; background:var(--sc-border-strong);"></span>
+                <span style="font-size:10.5px; font-family:'JetBrains Mono',monospace; color:var(--sc-text-mut);">v4.5</span>
+              </div>
+            </div>
+            <button onClick="{{ toggleZip }}" title="{{ t.downloadAll }}" style="flex:none; cursor:pointer; border:1px solid var(--sc-border-control); background:var(--sc-bg-raised); color:var(--sc-text-2); font-size:11px; font-weight:700; padding:8px 11px; border-radius:9px; display:flex; align-items:center; gap:6px; {{ zipBtnActive }}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>ZIP
+            </button>
+          </div>
+
+          <!-- Download-all package panel (collapsible) -->
+          <sc-if value="{{ zipOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="margin:0 16px 12px; padding:14px; background:var(--sc-bg-sunken); border:1px solid var(--sc-border); border-radius:12px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                <div style="font-size:12px; font-weight:600; color:var(--sc-text);">{{ t.packageTitle }}</div>
+                <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--sc-accent);">Airport.zip</div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:12px;">
+                <button onClick="{{ zipToggle_lyrics }}" style="cursor:pointer; border:none; background:transparent; padding:6px 4px; display:flex; align-items:center; gap:9px; text-align:left;">
+                  <span style="width:16px; height:16px; border-radius:5px; flex:none; display:flex; align-items:center; justify-content:center; {{ zipCkLyrics }}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                  <span style="flex:1; font-size:12.5px; color:var(--sc-text-2);">{{ t.lyrics }}</span>
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--sc-text-mut);">Airport.lrc · 2 KB</span>
+                </button>
+                <button onClick="{{ zipToggle_audio }}" style="cursor:pointer; border:none; background:transparent; padding:6px 4px; display:flex; align-items:center; gap:9px; text-align:left;">
+                  <span style="width:16px; height:16px; border-radius:5px; flex:none; display:flex; align-items:center; justify-content:center; {{ zipCkAudio }}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                  <span style="flex:1; font-size:12.5px; color:var(--sc-text-2);">{{ t.audio }}</span>
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--sc-text-mut);">Airport.mp3 · 4.8 MB</span>
+                </button>
+                <button onClick="{{ zipToggle_cover }}" style="cursor:pointer; border:none; background:transparent; padding:6px 4px; display:flex; align-items:center; gap:9px; text-align:left;">
+                  <span style="width:16px; height:16px; border-radius:5px; flex:none; display:flex; align-items:center; justify-content:center; {{ zipCkCover }}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                  <span style="flex:1; font-size:12.5px; color:var(--sc-text-2);">{{ t.cover }}</span>
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--sc-text-mut);">cover.jpg · 0.4 MB</span>
+                </button>
+                <button onClick="{{ zipToggle_video }}" style="cursor:pointer; border:none; background:transparent; padding:6px 4px; display:flex; align-items:center; gap:9px; text-align:left;">
+                  <span style="width:16px; height:16px; border-radius:5px; flex:none; display:flex; align-items:center; justify-content:center; {{ zipCkVideo }}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                  <span style="flex:1; font-size:12.5px; color:var(--sc-text-2);">{{ t.video }}</span>
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--sc-text-mut);">visualizer.mp4 · 12 MB</span>
+                </button>
+              </div>
+              <button style="width:100%; cursor:pointer; border:none; background:var(--sc-accent); color:var(--sc-on-accent); font-size:13px; font-weight:700; padding:11px; border-radius:10px; display:flex; align-items:center; justify-content:center; gap:7px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>{{ zipButtonLabel }}
+              </button>
+            </div>
+          </sc-if>
+
+          <!-- Tabs -->
+          <div style="display:flex; gap:4px; padding:0 16px 12px; border-bottom:1px solid var(--sc-border);">
+            <button onClick="{{ tab_lyrics }}" style="flex:1; cursor:pointer; border:none; background:transparent; color:var(--sc-text-3); font-size:12px; font-weight:600; padding:8px 4px; border-radius:8px; display:flex; align-items:center; justify-content:center; gap:6px; {{ tabLyrics }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>{{ t.lyrics }}</button>
+            <button onClick="{{ tab_audio }}" style="flex:1; cursor:pointer; border:none; background:transparent; color:var(--sc-text-3); font-size:12px; font-weight:600; padding:8px 4px; border-radius:8px; display:flex; align-items:center; justify-content:center; gap:6px; {{ tabAudio }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M3 12h3l2-7 4 16 3-10 2 5h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>{{ t.audio }}</button>
+            <button onClick="{{ tab_cover }}" style="flex:1; cursor:pointer; border:none; background:transparent; color:var(--sc-text-3); font-size:12px; font-weight:600; padding:8px 4px; border-radius:8px; display:flex; align-items:center; justify-content:center; gap:6px; {{ tabCover }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>{{ t.cover }}</button>
+            <button onClick="{{ tab_video }}" style="flex:1; cursor:pointer; border:none; background:transparent; color:var(--sc-text-3); font-size:12px; font-weight:600; padding:8px 4px; border-radius:8px; display:flex; align-items:center; justify-content:center; gap:6px; {{ tabVideo }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M10 9l5 3-5 3V9z" fill="currentColor"/></svg>{{ t.video }}</button>
+          </div>
+
+          <!-- ===== LYRICS TAB ===== -->
+          <sc-if value="{{ tabIsLyrics }}" hint-placeholder-val="{{ true }}">
+            <div>
+              <!-- toolbar -->
+              <div style="display:flex; align-items:center; gap:6px; padding:12px 16px 10px; flex-wrap:wrap;">
+                <button onClick="{{ toggleTimestamps }}" style="cursor:pointer; border:1px solid var(--sc-border-control); background:transparent; color:var(--sc-text-2); font-size:11.5px; font-weight:600; padding:6px 10px; border-radius:8px; display:flex; align-items:center; gap:6px; {{ tsActive }}">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>{{ t.timestamps }}
+                </button>
+                <button onClick="{{ toggleClean }}" style="cursor:pointer; border:1px solid var(--sc-border-control); background:transparent; color:var(--sc-text-2); font-size:11.5px; font-weight:600; padding:6px 10px; border-radius:8px; {{ cleanActive }}">{{ t.clean }}</button>
+                <div style="flex:1;"></div>
+                <div style="display:flex; background:var(--sc-bg-raised); border:1px solid var(--sc-border-control); border-radius:8px; padding:2px;">
+                  <button onClick="{{ case_none }}" title="Original" style="cursor:pointer; border:none; background:transparent; color:var(--sc-text-3); font-size:12px; font-weight:700; padding:4px 9px; border-radius:6px; {{ caseNone }}">Aa</button>
+                  <button onClick="{{ case_upper }}" title="UPPERCASE" style="cursor:pointer; border:none; background:transparent; color:var(--sc-text-3); font-size:12px; font-weight:700; padding:4px 9px; border-radius:6px; {{ caseUpper }}">A</button>
+                  <button onClick="{{ case_lower }}" title="lowercase" style="cursor:pointer; border:none; background:transparent; color:var(--sc-text-3); font-size:12px; font-weight:700; padding:4px 9px; border-radius:6px; {{ caseLower }}">a</button>
+                </div>
+              </div>
+
+              <!-- lyrics scroll -->
+              <div class="sc-scroll" style="height:226px; overflow-y:auto; margin:0 16px; padding:12px 14px; background:var(--sc-bg-sunken); border:1px solid var(--sc-border); border-radius:11px; font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.55;">
+                <sc-for list="{{ lines }}" as="ln" hint-placeholder-count="10">
+                  <div style="display:flex; gap:9px; margin-bottom:2px;">
+                    <sc-if value="{{ showTimestamps }}" hint-placeholder-val="{{ true }}">
+                      <span style="color:var(--sc-accent); opacity:.85; flex:none;">{{ ln.time }}</span>
+                    </sc-if>
+                    <span style="color:var(--sc-text-2);">{{ ln.text }}</span>
+                  </div>
+                </sc-for>
+              </div>
+
+              <!-- actions -->
+              <div style="display:flex; gap:8px; padding:12px 16px 16px;">
+                <button style="flex:1.4; cursor:pointer; border:none; background:var(--sc-accent); color:var(--sc-on-accent); font-size:13px; font-weight:700; padding:11px; border-radius:10px; display:flex; align-items:center; justify-content:center; gap:7px;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="11" height="11" rx="2" stroke="#fff" stroke-width="2"/><path d="M5 15V5a2 2 0 012-2h10" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>{{ t.copyLyrics }}
+                </button>
+                <button style="flex:1; cursor:pointer; border:1px solid var(--sc-border-control); background:transparent; color:var(--sc-text-2); font-size:13px; font-weight:600; padding:11px; border-radius:10px; display:flex; align-items:center; justify-content:center; gap:7px;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>.lrc
+                </button>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ===== AUDIO TAB ===== -->
+          <sc-if value="{{ tabIsAudio }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:16px;">
+              <div style="background:var(--sc-bg-sunken); border:1px solid var(--sc-border); border-radius:12px; padding:16px;">
+                <!-- waveform scrubber (click to seek; fills with playback position) -->
+                <div style="display:flex; align-items:center; gap:2px; height:60px; margin-bottom:14px; cursor:pointer;">
+                  <sc-for list="{{ bars }}" as="bar" hint-placeholder-count="44">
+                    <div onClick="{{ bar.onSeek }}" style="{{ bar.style }}"></div>
+                  </sc-for>
+                </div>
+                <!-- transport -->
+                <div style="display:flex; align-items:center; gap:11px;">
+                  <button onClick="{{ togglePlay }}" style="flex:none; cursor:pointer; width:40px; height:40px; border-radius:50%; border:none; background:var(--sc-accent); color:var(--sc-on-accent); display:flex; align-items:center; justify-content:center;">
+                    <sc-if value="{{ audioPlaying }}" hint-placeholder-val="{{ false }}">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+                    </sc-if>
+                    <sc-if value="{{ audioPaused }}" hint-placeholder-val="{{ true }}">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-left:2px;"><path d="M7 5v14l11-7z"/></svg>
+                    </sc-if>
+                  </button>
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--sc-text-2);">{{ audioCurTime }}<span style="color:var(--sc-text-mut);"> / {{ audioTotTime }}</span></span>
+                  <div style="flex:1;"></div>
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--sc-text-mut);">Airport.mp3</span>
+                </div>
+              </div>
+              <div style="text-align:center; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--sc-text-mut); margin:14px 0 14px;">MP3 · 2:31 · ~4.8 MB</div>
+              <button style="width:100%; cursor:pointer; border:none; background:var(--sc-accent); color:var(--sc-on-accent); font-size:13px; font-weight:700; padding:11px; border-radius:10px; display:flex; align-items:center; justify-content:center; gap:7px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>{{ t.downloadMp3 }}
+              </button>
+            </div>
+          </sc-if>
+
+          <!-- ===== COVER TAB ===== -->
+          <sc-if value="{{ tabIsCover }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:16px;">
+              <div style="width:200px; height:200px; margin:4px auto 16px; border-radius:14px; background:linear-gradient(135deg,var(--sc-accent-deeper),var(--sc-accent) 120%); position:relative; overflow:hidden; box-shadow:0 12px 30px rgba(0,0,0,.5);">
+                <div style="position:absolute; inset:0; background-image:radial-gradient(circle at 72% 26%, rgba(255,255,255,.3), transparent 55%);"></div>
+                <div style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:34px; height:34px; border-radius:50%; background:var(--sc-backdrop); border:7px solid rgba(255,255,255,.5);"></div>
+                <div style="position:absolute; left:14px; bottom:12px; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px; color:var(--sc-on-accent); text-shadow:0 1px 6px rgba(0,0,0,.5);">Airport</div>
+              </div>
+              <div style="text-align:center; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--sc-text-mut); margin-bottom:16px;">JPG · 1024×1024</div>
+              <button style="width:100%; cursor:pointer; border:none; background:var(--sc-accent); color:var(--sc-on-accent); font-size:13px; font-weight:700; padding:11px; border-radius:10px; display:flex; align-items:center; justify-content:center; gap:7px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>{{ t.downloadCover }}
+              </button>
+            </div>
+          </sc-if>
+
+          <!-- ===== VIDEO TAB ===== -->
+          <sc-if value="{{ tabIsVideo }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:16px;">
+              <div style="width:100%; aspect-ratio:16/10; border-radius:12px; background:linear-gradient(135deg,var(--sc-accent-deeper),var(--sc-accent-deep)); position:relative; overflow:hidden; margin-bottom:8px; box-shadow:0 10px 26px rgba(0,0,0,.45);">
+                <div style="position:absolute; inset:0; background-image:radial-gradient(circle at 50% 45%, var(--sc-accent-tint-bd), transparent 60%);"></div>
+                <div style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:54px; height:54px; border-radius:50%; background:rgba(255,255,255,.14); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.3);">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+                </div>
+                <div style="position:absolute; left:14px; bottom:12px; font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,.8);">visualizer.mp4 · 720p</div>
+              </div>
+              <div style="font-size:11px; color:var(--sc-text-mut); text-align:center; margin:6px 0 16px;">{{ t.videoNote }}</div>
+              <button style="width:100%; cursor:pointer; border:none; background:var(--sc-accent); color:var(--sc-on-accent); font-size:13px; font-weight:700; padding:11px; border-radius:10px; display:flex; align-items:center; justify-content:center; gap:7px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>{{ t.downloadVideo }}
+              </button>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ===== EMPTY STATE ===== -->
+      <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:40px 28px 34px; text-align:center;">
+          <div style="width:60px; height:60px; margin:0 auto 18px; border-radius:16px; background:var(--sc-bg-raised); border:1px solid var(--sc-border-control); display:flex; align-items:center; justify-content:center;">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" style="color:var(--sc-text-mut)"><path d="M9 18V5l11-2v13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="18" r="3" stroke="currentColor" stroke-width="2"/><circle cx="17" cy="16" r="3" stroke="currentColor" stroke-width="2"/></svg>
+          </div>
+          <div style="font-size:15px; font-weight:600; color:var(--sc-text); margin-bottom:6px;">{{ t.emptyTitle }}</div>
+          <div style="font-size:12.5px; color:var(--sc-text-3); line-height:1.5; max-width:280px; margin:0 auto 20px;">{{ t.emptyBody }}</div>
+          <div style="display:flex; gap:8px;">
+            <input placeholder="{{ t.pastePlaceholder }}" style="flex:1; min-width:0; background:var(--sc-bg-raised); border:1px solid var(--sc-border-control); border-radius:9px; padding:10px 12px; font-size:12px; color:var(--sc-text); outline:none;" />
+            <button style="cursor:pointer; border:none; background:var(--sc-accent); color:var(--sc-on-accent); font-weight:700; font-size:12px; padding:0 16px; border-radius:9px;">{{ t.load }}</button>
+          </div>
+          <a href="https://suno.com" target="_blank" style="display:inline-block; margin-top:16px; font-size:12px; color:var(--sc-accent); text-decoration:none; font-weight:600;">{{ t.openSuno }} →</a>
+        </div>
+      </sc-if>
+
+      <!-- ===== LOADING STATE ===== -->
+      <sc-if value="{{ isLoading }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:16px;">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:18px;">
+            <div class="sc-skel" style="width:52px; height:52px; border-radius:9px;"></div>
+            <div style="flex:1;">
+              <div class="sc-skel" style="width:55%; height:13px; margin-bottom:8px;"></div>
+              <div class="sc-skel" style="width:38%; height:11px;"></div>
+            </div>
+          </div>
+          <div class="sc-skel" style="width:100%; height:34px; border-radius:8px; margin-bottom:14px;"></div>
+          <div class="sc-skel" style="width:100%; height:226px; border-radius:11px; margin-bottom:14px;"></div>
+          <div style="display:flex; align-items:center; justify-content:center; gap:8px; color:var(--sc-text-mut); font-size:12px;">
+            <span style="width:14px; height:14px; border:2px solid var(--sc-border-control); border-top-color:var(--sc-accent); border-radius:50%; display:inline-block; animation:spin 0.8s linear infinite;"></span>
+            {{ t.loadingText }}
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== TOKEN ERROR STATE ===== -->
+      <sc-if value="{{ isError }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:34px 28px;">
+          <div style="width:56px; height:56px; margin:0 auto 16px; border-radius:50%; background:var(--sc-accent-tint); border:1px solid var(--sc-accent-tint-bd); display:flex; align-items:center; justify-content:center;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style="color:var(--sc-accent)"><path d="M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div style="font-size:15px; font-weight:600; color:var(--sc-text); text-align:center; margin-bottom:6px;">{{ t.errorTitle }}</div>
+          <div style="font-size:12.5px; color:var(--sc-text-3); line-height:1.5; text-align:center; max-width:300px; margin:0 auto 20px;">{{ t.errorBody }}</div>
+          <button onClick="{{ view_loading }}" style="width:100%; cursor:pointer; border:none; background:var(--sc-accent); color:var(--sc-on-accent); font-size:13px; font-weight:700; padding:11px; border-radius:10px; display:flex; align-items:center; justify-content:center; gap:7px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M21 12a9 9 0 11-2.6-6.4M21 3v6h-6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>{{ t.reconnect }}
+          </button>
+
+          <!-- Manual token setup: revealed only after auto-resolve fails -->
+          <button onClick="{{ toggleAdvanced }}" style="width:100%; cursor:pointer; border:none; background:transparent; color:var(--sc-text-mut); font-size:11.5px; font-weight:600; padding:12px 0 4px; display:flex; align-items:center; justify-content:center; gap:5px;">
+            {{ t.tryOther }}
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" style="transition:transform .2s; {{ chevronRot }}"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <sc-if value="{{ advancedOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:8px; padding:14px; background:var(--sc-bg-sunken); border:1px solid var(--sc-border); border-radius:10px;">
+              <div style="font-size:11px; color:var(--sc-text-mut); line-height:1.5; margin-bottom:10px;">{{ t.advancedHint }}</div>
+              <select style="width:100%; background:var(--sc-bg-raised); border:1px solid var(--sc-border-control); color:var(--sc-text); border-radius:8px; padding:9px 10px; font-size:12px; outline:none; margin-bottom:10px;">
+                <option>{{ t.tokenAuto }}</option>
+                <option>Alternative 1 — cookie-api.suno.co</option>
+                <option>Alternative 2 — localStorage.session</option>
+                <option>Alternative 3 — auth.suno.com</option>
+              </select>
+              <button onClick="{{ view_loading }}" style="width:100%; cursor:pointer; border:1px solid var(--sc-border-strong); background:var(--sc-bg-raised); color:var(--sc-text); font-size:12.5px; font-weight:600; padding:9px; border-radius:8px;">{{ t.retryWith }}</button>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- Footer status -->
+      <div style="display:flex; align-items:center; gap:6px; padding:9px 16px; border-top:1px solid var(--sc-border); background:var(--sc-bg-sunken); font-size:10.5px; color:var(--sc-text-mut);">
+        <span style="width:6px; height:6px; border-radius:50%; background:{{ statusDot }};"></span>{{ statusText }}
+      </div>
+
+    </div>
+  </div>
+</div>
+<helmet><style>@keyframes spin { to { transform: rotate(360deg); } }</style></helmet>
+<template id="__bundler_thumbnail">
+  <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" rx="20" fill="#1a1a1d"/>
+    <rect x="30" y="30" width="40" height="40" rx="11" fill="url(#g)"/>
+    <path d="M52 41v13" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M52 41l8-1.5v13" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="48" cy="54" r="3.4" stroke="#fff" stroke-width="2.4" fill="none"/>
+    <circle cx="60" cy="52.5" r="3.4" stroke="#fff" stroke-width="2.4" fill="none"/>
+    <defs><linearGradient id="g" x1="30" y1="30" x2="70" y2="70" gradientUnits="userSpaceOnUse"><stop stop-color="#E03C31"/><stop offset="1" stop-color="#7d1812"/></linearGradient></defs>
+  </svg>
+</template>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:480,&quot;height&quot;:760}}">
+const RAW = [
+  { time: '[00:13.56]', text: "Still drunk on the duvet, naked, my feet on the vent" },
+  { time: '[00:21.00]', text: "Call me both my names baby, I know what you meant" },
+  { time: '[00:26.67]', text: "Had Thanksgiving in October, start on the grief" },
+  { time: '[00:34.12]', text: "Your heart won't speak English, maybe Spanish, maybe Greek" },
+  { time: '[00:41.17]', text: "Oh which pieces do I keep" },
+  { time: '[00:44.24]', text: "to hide away while you sleep" },
+  { time: '[00:48.29]', text: "There's an airport and then there's the airport you left from" },
+  { time: '[00:55.30]', text: "left from, left from" },
+  { time: '[00:55.36]', text: "Twelve hours no contact, second anniversary done" },
+  { time: '[01:02.89]', text: "it's done, it's done" },
+  { time: '[01:03.03]', text: "I drove all night to the ocean water" },
+  { time: '[01:06.60]', text: "walked right in the cold, made it harder" },
+  { time: '[01:09.32]', text: "Oh oh tell me was I built to worship and crucify" },
+  { time: '[01:23.08]', text: "There's an airport and then there's the airport you left from" },
+];
+
+const I18N = {
+  de: {
+    lyrics: 'Lyrics', audio: 'Audio', cover: 'Cover', video: 'Video',
+    timestamps: 'Zeitmarken', clean: 'Bereinigen', copyLyrics: 'Lyrics kopieren',
+    downloadMp3: 'MP3 herunterladen', downloadCover: 'Cover herunterladen', downloadVideo: 'Video herunterladen',
+    connected: 'Verbunden', load: 'Laden',
+    pastePlaceholder: 'Suno-Songlink einfügen…',
+    advanced: 'Erweitert', tokenSource: 'Token-Quelle', tokenAuto: 'Automatisch (empfohlen)',
+    advancedHint: 'Nur ändern, wenn die automatische Erkennung den falschen Token wählt.',
+    emptyTitle: 'Kein Suno-Song erkannt', emptyBody: 'Öffne einen Song auf suno.com – oder füge einen Songlink ein, um zu starten.',
+    openSuno: 'suno.com öffnen', loadingText: 'Lyrics werden geladen…',
+    errorTitle: 'Sitzung konnte nicht gelesen werden', errorBody: 'Wir konnten deinen Suno-Token nicht finden. Stelle sicher, dass du auf suno.com angemeldet bist.',
+    reconnect: 'Erneut verbinden', tryOther: 'Token-Quelle manuell wählen', retryWith: 'Mit dieser Quelle erneut versuchen',
+    tokenSettings: 'Token-Einstellungen', videoNote: 'Visualizer-Video von Suno',
+    downloadAll: 'Alles als ZIP', packageTitle: 'Paket herunterladen', zipNothing: 'Mindestens 1 Datei wählen', zipDownload: 'ZIP herunterladen',
+  },
+  en: {
+    lyrics: 'Lyrics', audio: 'Audio', cover: 'Cover', video: 'Video',
+    timestamps: 'Timestamps', clean: 'Clean', copyLyrics: 'Copy lyrics',
+    downloadMp3: 'Download MP3', downloadCover: 'Download cover', downloadVideo: 'Download video',
+    connected: 'Connected', load: 'Load',
+    pastePlaceholder: 'Paste Suno song link…',
+    advanced: 'Advanced', tokenSource: 'Token source', tokenAuto: 'Automatic (recommended)',
+    advancedHint: 'Only change this if auto-detection picks the wrong token.',
+    emptyTitle: 'No Suno song detected', emptyBody: 'Open a song on suno.com — or paste a song link to get started.',
+    openSuno: 'Open suno.com', loadingText: 'Fetching lyrics…',
+    errorTitle: "Couldn't read your session", errorBody: "We couldn't find your Suno token. Make sure you're signed in at suno.com.",
+    reconnect: 'Reconnect', tryOther: 'Choose token source manually', retryWith: 'Retry with this source',
+    tokenSettings: 'Token settings', videoNote: 'Visualizer video from Suno',
+    downloadAll: 'Download all as ZIP', packageTitle: 'Download package', zipNothing: 'Select at least 1 file', zipDownload: 'Download ZIP',
+  },
+};
+
+const ACTIVE_PILL = 'background:var(--sc-accent-weak-bg); border-color:var(--sc-accent); color:var(--sc-accent-text);';
+const ACTIVE_TAB = 'background:var(--sc-bg-raised); color:var(--sc-text);';
+const ACTIVE_SEG = 'background:var(--sc-accent); color:var(--sc-on-accent);';
+const ACTIVE_GHOST = 'background:var(--sc-bg-raised); color:var(--sc-text); border-color:var(--sc-border-strong);';
+const CK_ON = 'background:var(--sc-accent); border:1px solid var(--sc-accent); color:var(--sc-on-accent);';
+const CK_OFF = 'background:transparent; border:1px solid var(--sc-border-strong); color:transparent;';
+const ZIP_SIZES = { lyrics: 0.002, audio: 4.8, cover: 0.4, video: 12 };
+const AUDIO_DUR = 151; // 2:31 in seconds
+const BAR_H = Array.from({ length: 44 }, (_, i) =>
+  Math.max(16, Math.min(96, Math.round(26 + 48 * Math.abs(Math.sin(i * 0.7 + 1)) + 22 * Math.abs(Math.cos(i * 0.33))))));
+const fmtTime = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+class Component extends DCLogic {
+  state = { view: 'loaded', tab: 'lyrics', timestamps: true, clean: false, caseMode: 'none', lang: 'en', pasteOpen: false, advancedOpen: false, zipOpen: false, themeName: 'dark', audioPlaying: false, audioPos: 0, zip: { lyrics: true, audio: true, cover: true, video: true } };
+
+  componentWillUnmount() { clearInterval(this._t); }
+
+  _startAudio() {
+    clearInterval(this._t);
+    this._base = this.state.audioPos >= AUDIO_DUR ? 0 : this.state.audioPos;
+    this._ts = Date.now();
+    this.setState({ audioPlaying: true, audioPos: this._base });
+    this._t = setInterval(() => {
+      const pos = this._base + (Date.now() - this._ts) / 1000;
+      if (pos >= AUDIO_DUR) { clearInterval(this._t); this.setState({ audioPos: AUDIO_DUR, audioPlaying: false }); }
+      else this.setState({ audioPos: pos });
+    }, 80);
+  }
+  _stopAudio() { clearInterval(this._t); this.setState({ audioPlaying: false }); }
+  _seekAudio(pos) { this._base = pos; this._ts = Date.now(); this.setState({ audioPos: pos }); }
+
+  proc() {
+    return RAW.map(l => {
+      let t = l.text;
+      if (this.state.clean) t = t.replace(/[^\p{L}\p{N}\s]/gu, '').replace(/\s+/g, ' ').trim();
+      if (this.state.caseMode === 'upper') t = t.toUpperCase();
+      else if (this.state.caseMode === 'lower') t = t.toLowerCase();
+      return { time: l.time, text: t };
+    });
+  }
+
+  renderVals() {
+    const s = this.state;
+    const t = I18N[s.lang];
+    const on = (c) => c ? ACTIVE_PILL : '';
+    const zipKeys = Object.keys(s.zip).filter(k => s.zip[k]);
+    const zipMb = zipKeys.reduce((a, k) => a + ZIP_SIZES[k], 0);
+    const zipLabel = zipKeys.length === 0
+      ? t.zipNothing
+      : `${t.zipDownload} · ${zipKeys.length} ${s.lang === 'de' ? 'Dateien' : 'files'} · ~${zipMb < 1 ? Math.round(zipMb * 1000) + ' KB' : zipMb.toFixed(1) + ' MB'}`;
+    return {
+      t,
+      lines: this.proc(),
+      showTimestamps: s.timestamps,
+      // views
+      isLoaded: s.view === 'loaded',
+      isEmpty: s.view === 'empty',
+      isLoading: s.view === 'loading',
+      isError: s.view === 'error',
+      // tabs
+      tabIsLyrics: s.tab === 'lyrics', tabIsAudio: s.tab === 'audio',
+      tabIsCover: s.tab === 'cover', tabIsVideo: s.tab === 'video',
+      tabLyrics: s.tab === 'lyrics' ? ACTIVE_TAB : '',
+      tabAudio: s.tab === 'audio' ? ACTIVE_TAB : '',
+      tabCover: s.tab === 'cover' ? ACTIVE_TAB : '',
+      tabVideo: s.tab === 'video' ? ACTIVE_TAB : '',
+      // toolbar
+      tsActive: on(s.timestamps),
+      cleanActive: on(s.clean),
+      caseNone: s.caseMode === 'none' ? ACTIVE_SEG : '',
+      caseUpper: s.caseMode === 'upper' ? ACTIVE_SEG : '',
+      caseLower: s.caseMode === 'lower' ? ACTIVE_SEG : '',
+      // lang
+      langDe: s.lang === 'de' ? ACTIVE_SEG : '',
+      langEn: s.lang === 'en' ? ACTIVE_SEG : '',
+      // panels
+      pasteOpen: s.pasteOpen, advancedOpen: s.advancedOpen,
+      chevronRot: s.advancedOpen ? 'transform:rotate(180deg);' : '',
+      // zip package
+      zipOpen: s.zipOpen,
+      zipBtnActive: s.zipOpen ? ACTIVE_GHOST : '',
+      zipCkLyrics: s.zip.lyrics ? CK_ON : CK_OFF,
+      zipCkAudio: s.zip.audio ? CK_ON : CK_OFF,
+      zipCkCover: s.zip.cover ? CK_ON : CK_OFF,
+      zipCkVideo: s.zip.video ? CK_ON : CK_OFF,
+      zipButtonLabel: zipLabel,
+      themeName: s.themeName,
+      // audio preview player
+      audioPlaying: s.audioPlaying,
+      audioPaused: !s.audioPlaying,
+      audioCurTime: fmtTime(s.audioPos),
+      audioTotTime: fmtTime(AUDIO_DUR),
+      bars: BAR_H.map((h, i) => {
+        const on = (i + 0.5) / BAR_H.length <= s.audioPos / AUDIO_DUR;
+        return {
+          style: `flex:1; min-width:0; height:${h}%; border-radius:2px; transition:background .08s, height .25s; background:${on ? 'var(--sc-accent)' : 'var(--sc-border-strong)'};`,
+          onSeek: () => this._seekAudio(Math.round(((i + 0.5) / BAR_H.length) * AUDIO_DUR)),
+        };
+      }),
+      togglePlay: () => {
+        if (this.state.audioPlaying) { this._stopAudio(); }
+        else { if (this.state.audioPos >= AUDIO_DUR) this.setState({ audioPos: 0 }); this._startAudio(); }
+      },
+      themeDark: s.themeName === 'dark' ? ACTIVE_SEG : '',
+      themeEmber: s.themeName === 'ember' ? ACTIVE_SEG : '',
+      themeMono: s.themeName === 'mono' ? ACTIVE_SEG : '',
+      theme_dark: () => this.setState({ themeName: 'dark' }),
+      theme_ember: () => this.setState({ themeName: 'ember' }),
+      theme_mono: () => this.setState({ themeName: 'mono' }),
+      toggleZip: () => this.setState(p => ({ zipOpen: !p.zipOpen })),
+      zipToggle_lyrics: () => this.setState(p => ({ zip: { ...p.zip, lyrics: !p.zip.lyrics } })),
+      zipToggle_audio: () => this.setState(p => ({ zip: { ...p.zip, audio: !p.zip.audio } })),
+      zipToggle_cover: () => this.setState(p => ({ zip: { ...p.zip, cover: !p.zip.cover } })),
+      zipToggle_video: () => this.setState(p => ({ zip: { ...p.zip, video: !p.zip.video } })),
+      pasteBtnActive: s.pasteOpen ? ACTIVE_GHOST : '',
+      gearActive: s.advancedOpen ? ACTIVE_GHOST : '',
+      // demo chips
+      chipLoaded: s.view === 'loaded' ? 'background:var(--sc-accent); color:var(--sc-on-accent);' : '',
+      chipEmpty: s.view === 'empty' ? 'background:var(--sc-accent); color:var(--sc-on-accent);' : '',
+      chipLoading: s.view === 'loading' ? 'background:var(--sc-accent); color:var(--sc-on-accent);' : '',
+      chipError: s.view === 'error' ? 'background:var(--sc-accent); color:var(--sc-on-accent);' : '',
+      // footer
+      statusDot: s.view === 'error' ? 'var(--sc-accent)' : (s.view === 'loaded' ? 'var(--sc-ok)' : 'var(--sc-text-mut)'),
+      statusText: s.view === 'error' ? (s.lang === 'de' ? 'Nicht verbunden' : 'Not connected') : (s.lang === 'de' ? 'Verbunden über Sitzungs-Token' : 'Connected via session token'),
+      // handlers
+      tab_lyrics: () => this.setState({ tab: 'lyrics' }),
+      tab_audio: () => this.setState({ tab: 'audio' }),
+      tab_cover: () => this.setState({ tab: 'cover' }),
+      tab_video: () => this.setState({ tab: 'video' }),
+      toggleTimestamps: () => this.setState(p => ({ timestamps: !p.timestamps })),
+      toggleClean: () => this.setState(p => ({ clean: !p.clean })),
+      case_none: () => this.setState({ caseMode: 'none' }),
+      case_upper: () => this.setState({ caseMode: 'upper' }),
+      case_lower: () => this.setState({ caseMode: 'lower' }),
+      lang_de: () => this.setState({ lang: 'de' }),
+      lang_en: () => this.setState({ lang: 'en' }),
+      togglePaste: () => this.setState(p => ({ pasteOpen: !p.pasteOpen })),
+      toggleAdvanced: () => this.setState(p => ({ advancedOpen: !p.advancedOpen })),
+      view_loaded: () => this.setState({ view: 'loaded' }),
+      view_empty: () => this.setState({ view: 'empty' }),
+      view_loading: () => { this.setState({ view: 'loading' }); setTimeout(() => this.setState({ view: 'loaded' }), 1600); },
+      view_error: () => this.setState({ view: 'error' }),
+    };
+  }
+}
+</script>
+</body>
+</html>
