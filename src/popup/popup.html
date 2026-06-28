@@ -1,0 +1,82 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SUNO Copilot</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<div class="container">
+    <div class="close-button">
+        <button class="close-btn" id="closeButton">✕</button>
+    </div>
+    <div class="language-switcher">
+        <button class="lang-btn active" data-lang="de">DE</button>
+        <button class="lang-btn" data-lang="en">EN</button>
+    </div>
+
+    <div class="header">
+        <h1 data-i18n="title">SUNO Copilot</h1>
+        <p class="subtitle" data-i18n="subtitle">LRC-Inhalt wurde automatisch geladen und kann bearbeitet werden</p>
+    </div>
+
+    <div class="token-controls">
+        <label for="tokenPathSelect" data-i18n="token_path_label">Token Erkennung</label>
+        <select id="tokenPathSelect">
+            <option value="auto">Auto</option>
+        </select>
+        <div class="token-path" id="tokenPathDisplay">Konnte kein Token finden</div>
+    </div>
+
+    <div class="options">
+        <button class="option-button" id="removePunct" data-active="true">
+            <span class="option-icon">Aa</span>
+            <span class="option-text" data-i18n="remove_punctuation">Satzzeichen Enfernen</span>
+        </button>
+        <button class="option-button" id="toUpper" data-active="false">
+            <span class="option-icon">A</span>
+            <span class="option-text" data-i18n="to_upper">ALLES GROSS</span>
+        </button>
+        <button class="option-button" id="toLower" data-active="false">
+            <span class="option-icon">a</span>
+            <span class="option-text" data-i18n="to_lower">alles klein</span>
+        </button>
+    </div>
+
+    <div class="textarea-wrapper">
+        <textarea id="output" data-i18n-placeholder="placeholder" placeholder="Verarbeite LRC-Inhalt..."></textarea>
+    </div>
+
+    <div class="buttons-container">
+        <div class="button-group">
+            <button id="copyButton">
+                <span class="icon">📋</span>
+                <span data-i18n="copy_clipboard">Kopieren</span>
+            </button>
+            <button id="downloadButton">
+                <span class="icon">💾</span>
+                <span data-i18n="download_file">Download</span>
+            </button>
+        </div>
+        <div class="button-group secondary">
+            <button id="downloadMp3Button" disabled>
+                <span class="icon">🎵</span>
+                <span data-i18n="download_mp3">Audio</span>
+            </button>
+            <button id="downloadCoverButton" disabled>
+                <span class="icon">🖼️</span>
+                <span data-i18n="download_cover">Cover</span>
+            </button>
+            <button id="downloadVideoButton" disabled>
+                <span class="icon">🎬</span>
+                <span data-i18n="download_video">Video</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="popup.js"></script>
+
+</body>
+</html>

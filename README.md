@@ -1,5 +1,7 @@
 # SUNO Copilot
 
+> ⚠️ **Heavily WIP (v0.0.9).** Structure and APIs are still changing.
+
 A Chrome (Manifest V3) extension that downloads **timed lyrics (`.lrc`)**, **audio**,
 **cover art**, and **video** from [Suno](https://suno.com) song pages, with optional
 text cleaning of the lyrics.
@@ -19,14 +21,15 @@ text cleaning of the lyrics.
 
 ## How it works
 
-The extension has the three standard MV3 contexts:
+The extension has the three standard MV3 contexts. Source lives in `src/`
+(TypeScript) and is bundled into `dist/` by esbuild:
 
-| File | Role |
-| --- | --- |
-| `manifest.json` | MV3 configuration. |
-| `background.js` | Service worker. Reads Suno auth cookies via `chrome.cookies` on request (content scripts cannot read HttpOnly cookies directly). |
-| `contentScript.js` | Runs on `suno.com`. Discovers a bearer token from cookies/localStorage, calls Suno's `aligned_lyrics` API, and scrapes title/artist/media URLs from the page. |
-| `popup.html` / `popup.js` | UI. Formats the LRC, applies cleaning options, and triggers downloads. |
+| Source | Built file | Role |
+| --- | --- | --- |
+| `src/background/index.ts` | `dist/background.js` | Service worker. Reads Suno auth cookies via `chrome.cookies` on request (content scripts cannot read HttpOnly cookies directly). |
+| `src/content/*.ts` | `dist/contentScript.js` | Runs on `suno.com`. Discovers a bearer token (`tokenDiscovery`), calls Suno's `aligned_lyrics` API (`sunoApi`), formats it (`lrc`), and scrapes metadata (`metadata`). |
+| `src/popup/popup.ts` + `popup.html` / `popup.css` | `dist/popup.js` + html/css | UI. Formats the LRC, applies cleaning options, and triggers downloads. |
+| `src/shared/types.ts` | — | Typed message contracts shared across all three contexts. |
 
 Flow: the popup sends `GET_LRC_DATA` to the content script, which tries each
 token candidate until one returns lyrics, then responds with the LRC and media
@@ -48,18 +51,24 @@ was reloaded), the popup injects it on demand via `chrome.scripting`.
 Requires Node.js 18+.
 
 ```bash
-npm install        # install dev tooling (ESLint, Prettier)
-npm run lint       # lint all JS
+npm install        # install dev tooling (esbuild, TypeScript, ESLint, Prettier)
+npm run build      # bundle src/ -> dist/
+npm run watch      # rebuild on change
+npm run typecheck  # tsc --noEmit
+npm run lint       # ESLint
+npm run check      # typecheck + lint
 npm run format     # format with Prettier
 ```
 
 ### Load the extension
 
-1. Open `chrome://extensions`.
-2. Enable **Developer mode**.
-3. Click **Load unpacked** and select this folder.
-4. After changing code, click the reload icon on the extension card. Suno tabs
-   opened before the reload are handled automatically by on-demand injection.
+1. Run `npm run build` (or `npm run watch`) to produce `dist/`.
+2. Open `chrome://extensions`.
+3. Enable **Developer mode**.
+4. Click **Load unpacked** and select the **`dist/`** folder.
+5. After changing code, rebuild (or keep `npm run watch` running) and click the
+   reload icon on the extension card. Suno tabs opened before the reload are
+   handled automatically by on-demand injection.
 
 ## License
 
