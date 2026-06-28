@@ -1,3 +1,4 @@
+import { logger } from '../shared/logger';
 import type { GetCookiesRequest, GetCookiesResponse } from '../shared/types';
 
 // Supplies the relevant Suno auth cookies (__client, __session, Clerk) to the
@@ -17,7 +18,7 @@ chrome.runtime.onMessage.addListener(
                 sendResponse({ cookies });
             })
             .catch((error) => {
-                console.error('[Background] Fehler beim Lesen der Cookies:', error);
+                logger.error('[Background] Fehler beim Lesen der Cookies:', error);
                 sendResponse({ cookies: [], error: error?.message || String(error) });
             });
 

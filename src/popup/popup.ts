@@ -1,17 +1,18 @@
+import { CDN_BASE, LANG_STORAGE_KEY } from '../shared/config';
+import { logger } from '../shared/logger';
 import type {
     GetLrcDataRequest,
     LrcDataResponse,
     MediaUrls,
     TokenOption
 } from '../shared/types';
-
-type Lang = 'de' | 'en';
-
-interface TextOptions {
-    removePunct: boolean;
-    toUpper: boolean;
-    toLower: boolean;
-}
+import { type Lang, translate } from './i18n';
+import {
+    type TextOptions,
+    addVizzyWorkaround,
+    cleanFilename,
+    convertLrc
+} from './textProcessing';
 
 interface MediaDownloadConfig {
     type: string;
@@ -32,78 +33,19 @@ function byId<T extends HTMLElement = HTMLElement>(id: string): T {
     return document.getElementById(id) as T;
 }
 
-// Language strings
-const i18n: Record<Lang, Record<string, string>> = {
-    de: {
-        title: 'SUNO Copilot',
-        subtitle: 'More than Battlerap!',
-        remove_punctuation: 'Text bereinigen',
-        to_upper: 'ALLES GROSS',
-        to_lower: 'alles klein',
-        copy_clipboard: 'Lyrics kopieren',
-        download_file: 'Lyrics herunterladen',
-        download_mp3: 'Audio',
-        download_cover: 'Cover',
-        download_video: 'Video',
-        error_loading: 'Fehler beim Laden der Daten. Bitte die Seite neu laden.',
-        no_content: 'Kein Inhalt verfügbar.',
-        open_song_page: 'Kein Song gefunden. Bitte öffne eine Hurensuno Song-Seite.',
-        status_loaded: 'Lyrics geladen',
-        status_copied: 'Lyrics in die Zwischenablage kopiert',
-        status_downloaded: 'Datei heruntergeladen',
-        status_mp3_started: 'Download gestartet',
-        status_error: 'Unbekannter Fehler',
-        status_nothing: 'Es gibt nichts zu kopieren, Hurensohn!',
-        placeholder: 'Lade Lyrics, Hurensohn!',
-        token_path_label: 'Token Erkennung',
-        alternative_prefix: 'Alternative',
-        no_path_found: 'Konnte keinen Weg finden',
-        no_token_found: 'Konnte kein Token finden',
-        auto_label: 'Auto',
-        selection_label: 'Auswahl'
-    },
-    en: {
-        title: 'SUNO Copilot',
-        subtitle: 'More than Battlerap!',
-        remove_punctuation: 'Clean text',
-        to_upper: 'UPPERCASE',
-        to_lower: 'lowercase',
-        copy_clipboard: 'Copy Lyrics',
-        download_file: 'Download Lyrics',
-        download_mp3: 'Audio',
-        download_cover: 'Cover',
-        download_video: 'Video',
-        error_loading: 'Error loading data. Please reload the page.',
-        no_content: 'No content available.',
-        open_song_page: 'No Song found. Please open a Hurensuno song page.',
-        status_loaded: 'Lyrics loaded',
-        status_copied: 'Lyrics copied',
-        status_downloaded: 'File downloaded',
-        status_mp3_started: 'MP3 download started!',
-        status_error: 'Unknown Error',
-        status_nothing: 'Nothing to copy, motherfucker!',
-        placeholder: 'Processing Lyrics, bitch!',
-        token_path_label: 'Token Discovery',
-        alternative_prefix: 'Alternative',
-        no_path_found: "couldn't find a path",
-        no_token_found: 'No token found',
-        auto_label: 'Auto',
-        selection_label: 'Selection'
-    }
-};
-
+/** Translates a key in the current language. */
 function t(key: string): string {
-    return i18n[currentLang][key] ?? '';
+    return translate(key, currentLang);
 }
 
-// Punctuation characters stripped during text cleaning.
-const PUNCTUATION_TO_REMOVE = [
-    '-', ',', '?', '*', '"', '–', '!', '„', '“',
-    '.', ':', '”', '‘',
-    ';', '¿', '¡', '…', '—', '(', ')', '{', '}', '/', '\\',
-    '«', '»', '‹', '›', '〈', '〉', '《', '》', '〔', '〕',
-    '~'
-];
+/** Reads the current text-cleaning option toggles from the DOM. */
+function readTextOptions(): TextOptions {
+    return {
+        removePunct: byId('removePunct').getAttribute('data-active') === 'true',
+        toUpper: byId('toUpper').getAttribute('data-active') === 'true',
+        toLower: byId('toLower').getAttribute('data-active') === 'true'
+    };
+}
 
 /** Shows where the token came from (or a localized "no token" message). */
 function updateTokenPath(text?: string | null): void {
@@ -113,9 +55,8 @@ function updateTokenPath(text?: string | null): void {
     const fallback = t('no_token_found') || 'Konnte kein Token finden';
 
     if (raw === 'NO_TOKEN') {
-        const translated = t('no_token_found') || 'Konnte kein Token finden';
-        el.textContent = translated;
-        el.title = translated;
+        el.textContent = fallback;
+        el.title = fallback;
         return;
     }
 
@@ -166,175 +107,31 @@ function updateTokenOptions(options: TokenOption[], selectedId?: string): void {
     selectEl.value = found ? keepValue : 'auto';
 }
 
-/** Translates the interface to the given language and persists the choice. */
-function translateInterface(lang: Lang): void {
+/** Updates all UI text to the given language (does not persist the choice). */
+function applyLanguage(lang: Lang): void {
     currentLang = lang;
-    localStorage.setItem('suno-lyrics-lang', lang);
 
     document.querySelectorAll<HTMLElement>('[data-i18n]').forEach((element) => {
         const key = element.getAttribute('data-i18n');
-        if (key && i18n[lang][key]) {
-            element.textContent = i18n[lang][key];
-        }
+        const value = key ? translate(key, lang) : '';
+        if (value) element.textContent = value;
     });
 
     document.querySelectorAll<HTMLTextAreaElement>('[data-i18n-placeholder]').forEach((element) => {
         const key = element.getAttribute('data-i18n-placeholder');
-        if (key && i18n[lang][key]) {
-            element.placeholder = i18n[lang][key];
-        }
+        const value = key ? translate(key, lang) : '';
+        if (value) element.placeholder = value;
     });
 
     document.querySelectorAll<HTMLElement>('.lang-btn').forEach((btn) => {
-        btn.classList.remove('active');
-        if (btn.getAttribute('data-lang') === lang) {
-            btn.classList.add('active');
-        }
+        btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
     });
 }
 
-function removePunctuation(text: string): string {
-    let result = text;
-    for (const char of PUNCTUATION_TO_REMOVE) {
-        while (result.indexOf(char) !== -1) {
-            result = result.replace(char, '');
-        }
-    }
-
-    // Remove emojis across the common Unicode ranges.
-    result = result.replace(/[\u{1F600}-\u{1F64F}]/gu, '');
-    result = result.replace(/[\u{1F300}-\u{1F5FF}]/gu, '');
-    result = result.replace(/[\u{1F680}-\u{1F6FF}]/gu, '');
-    result = result.replace(/[\u{1F1E0}-\u{1F1FF}]/gu, '');
-    result = result.replace(/[\u{2600}-\u{26FF}]/gu, '');
-    result = result.replace(/[\u{2700}-\u{27BF}]/gu, '');
-    result = result.replace(/[\u{1F900}-\u{1F9FF}]/gu, '');
-    result = result.replace(/[\u{1FA70}-\u{1FAFF}]/gu, '');
-
-    return result.replace(/\s+/g, ' ').trim();
-}
-
-function cleanFilename(filename: string): string {
-    return filename
-        .replace(/[<>:"/|?*]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-}
-
-/** Removes square brackets and their contents (always applied first). */
-function removeBrackets(text: string): string {
-    return text.replace(/\[[^\]]*\]/g, '');
-}
-
-function cleanLyricsText(text: string): string {
-    return text
-        .replace(/([(])\s+/g, '$1') // remove space directly after an opening bracket
-        .replace(/„ +/g, '„') // remove spaces after German opening quotes
-        .replace(/“ +/g, '“') // remove spaces after double quotes
-        .replace(/‘ +/g, '‘') // remove spaces after single quotes
-        .replace(/\s+/g, ' ')
-        .trim();
-}
-
-/** Applies the active cleaning options to a piece of lyric text. */
-function applyTextOptions(text: string, opts: TextOptions): string {
-    text = removeBrackets(text);
-    if (opts.removePunct) text = removePunctuation(text);
-    if (opts.toUpper) text = text.toUpperCase();
-    if (opts.toLower) text = text.toLowerCase();
-    return text;
-}
-
-/** Reformats raw LRC into one line per verse, applying the chosen options. */
-function convertLrc(lrcContent: string): string {
-    const lines = lrcContent.split('\n');
-    let result = '';
-    let currentVerse: string[] = [];
-    let firstTimestamp = '';
-    const opts: TextOptions = {
-        removePunct: byId('removePunct').getAttribute('data-active') === 'true',
-        toUpper: byId('toUpper').getAttribute('data-active') === 'true',
-        toLower: byId('toLower').getAttribute('data-active') === 'true'
-    };
-
-    function flushVerse(): void {
-        if (currentVerse.length === 0) return;
-        const verseText = cleanLyricsText(applyTextOptions(currentVerse.join(' ').trim(), opts));
-        result += `[${firstTimestamp}]${verseText}\n`;
-        currentVerse = [];
-        firstTimestamp = '';
-    }
-
-    for (const line of lines) {
-        if (line.trim() === '') {
-            flushVerse();
-            continue;
-        }
-
-        const timeMatches: string[] = [];
-        let textPart = line;
-        let pos = 0;
-
-        while (pos < textPart.length) {
-            const openBracketPos = textPart.indexOf('[', pos);
-            if (openBracketPos === -1) break;
-
-            const closeBracketPos = textPart.indexOf(']', openBracketPos);
-            if (closeBracketPos === -1) break;
-
-            const content = textPart.substring(openBracketPos + 1, closeBracketPos);
-            if (/^\d{2}:\d{2}\.\d{2,3}$/.test(content)) {
-                timeMatches.push(content);
-            }
-            textPart = textPart.substring(0, openBracketPos) + textPart.substring(closeBracketPos + 1);
-            pos = openBracketPos;
-        }
-
-        textPart = textPart.trim();
-
-        if (timeMatches.length > 0 && firstTimestamp === '') {
-            firstTimestamp = timeMatches[0];
-        }
-
-        if (textPart) {
-            textPart = applyTextOptions(textPart, opts);
-            if (textPart) currentVerse.push(textPart);
-        }
-    }
-
-    flushVerse();
-
-    return result.trim();
-}
-
-/** Duplicates the last LRC line +2 seconds (workaround for the Vizzy player). */
-function addVizzyWorkaround(lrcContent: string): string {
-    if (!lrcContent || !lrcContent.trim()) return lrcContent;
-
-    const lines = lrcContent.trim().split('\n');
-    if (lines.length === 0) return lrcContent;
-
-    const lastLine = lines[lines.length - 1];
-    const timestampMatch = lastLine.match(/^\[(\d{2}):(\d{2})\.(\d{2})\]/);
-    if (!timestampMatch) return lrcContent;
-
-    let minutes = parseInt(timestampMatch[1], 10);
-    let seconds = parseInt(timestampMatch[2], 10);
-    const milliseconds = parseInt(timestampMatch[3], 10);
-
-    seconds += 2;
-    if (seconds >= 60) {
-        minutes += Math.floor(seconds / 60);
-        seconds = seconds % 60;
-    }
-
-    const newTimestamp =
-        `${String(minutes).padStart(2, '0')}:` +
-        `${String(seconds).padStart(2, '0')}.` +
-        `${String(milliseconds).padStart(2, '0')}`;
-
-    const duplicatedLine = lastLine.replace(/^\[\d{2}:\d{2}\.\d{2}\]/, `[${newTimestamp}]`);
-    return `${lrcContent}\n${duplicatedLine}`;
+/** Applies a language and persists the choice to chrome.storage. */
+function setLanguage(lang: Lang): void {
+    applyLanguage(lang);
+    chrome.storage.local.set({ [LANG_STORAGE_KEY]: lang });
 }
 
 /** Probes whether a video URL is actually playable. */
@@ -380,7 +177,7 @@ async function checkVideoAvailability(videoUrl: string): Promise<boolean> {
 /** Triggers a browser download for a song media file (MP3/cover/video). */
 function downloadMedia(config: MediaDownloadConfig): void {
     if (!songId || !config.url) {
-        console.error(`Cannot download ${config.type}: missing songId or URL`);
+        logger.error(`Cannot download ${config.type}: missing songId or URL`);
         showStatus(t('status_error'), 'error');
         return;
     }
@@ -388,7 +185,7 @@ function downloadMedia(config: MediaDownloadConfig): void {
 
     chrome.downloads.download({ url: config.url, filename, saveAs: false }, () => {
         if (chrome.runtime.lastError) {
-            console.error('Download failed:', chrome.runtime.lastError);
+            logger.error('Download failed:', chrome.runtime.lastError);
             showStatus(t('status_error'), 'error');
         } else {
             showStatus(config.successStatus || t('status_downloaded'), 'success');
@@ -399,7 +196,7 @@ function downloadMedia(config: MediaDownloadConfig): void {
 function downloadMp3(): void {
     downloadMedia({
         type: 'mp3',
-        url: `https://cdn1.suno.ai/${songId}.mp3`,
+        url: `${CDN_BASE}/${songId}.mp3`,
         suffix: '.mp3',
         successStatus: t('status_mp3_started')
     });
@@ -463,7 +260,7 @@ function downloadAllSequence(): void {
     if (removePunctButton && removePunctButton.getAttribute('data-active') !== 'true') {
         removePunctButton.setAttribute('data-active', 'true');
         if (originalLrcContent) {
-            byId<HTMLTextAreaElement>('output').value = convertLrc(originalLrcContent);
+            byId<HTMLTextAreaElement>('output').value = convertLrc(originalLrcContent, readTextOptions());
         }
     }
 
@@ -484,7 +281,7 @@ function downloadAllSequence(): void {
 
 /** Logs status to the console (the visual status bar was removed). */
 function showStatus(message: string, type?: string): void {
-    console.debug(`[Suno Extension] ${(type || 'info').toUpperCase()}: ${message || ''}`);
+    logger.debug(`[Suno Extension] ${(type || 'info').toUpperCase()}: ${message || ''}`);
 }
 
 type LrcRequestCallback = (response?: LrcDataResponse, lastError?: chrome.runtime.LastError) => void;
@@ -551,7 +348,7 @@ function applyLrcResponse(response?: LrcDataResponse): void {
                         }
                     })
                     .catch((error) => {
-                        console.error('[Video Check] Video accessibility check failed:', error);
+                        logger.error('[Video Check] Video accessibility check failed:', error);
                         videoButton.disabled = true;
                         videoButton.title = 'Video accessibility check failed';
                     });
@@ -567,7 +364,7 @@ function applyLrcResponse(response?: LrcDataResponse): void {
             byId<HTMLButtonElement>('downloadVideoButton').disabled = true;
         }
 
-        byId<HTMLTextAreaElement>('output').value = convertLrc(originalLrcContent);
+        byId<HTMLTextAreaElement>('output').value = convertLrc(originalLrcContent, readTextOptions());
         showStatus(t('status_loaded'), 'success');
     } else if (response && response.error === 'Not on a song page') {
         byId<HTMLTextAreaElement>('output').value = t('open_song_page');
@@ -579,8 +376,12 @@ function applyLrcResponse(response?: LrcDataResponse): void {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const savedLang = (localStorage.getItem('suno-lyrics-lang') as Lang) || 'de';
-    translateInterface(savedLang);
+    // Render with the default language immediately, then apply the stored choice.
+    applyLanguage('de');
+    chrome.storage.local.get(LANG_STORAGE_KEY, (items) => {
+        const saved = items[LANG_STORAGE_KEY] as Lang | undefined;
+        if (saved && saved !== currentLang) applyLanguage(saved);
+    });
     updateTokenPath('NO_TOKEN');
     updateTokenOptions([], 'auto');
 
@@ -591,7 +392,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll<HTMLElement>('.lang-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
             const lang = btn.getAttribute('data-lang') as Lang;
-            translateInterface(lang);
+            setLanguage(lang);
         });
     });
 
@@ -609,7 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 sendLrcRequest(tabId, { action: 'GET_LRC_DATA', tokenOptionId }, (response, lastError) => {
                     isRefreshingFromDropdown = false;
                     if (lastError) {
-                        console.error('Error:', lastError);
+                        logger.error('Error:', lastError);
                         updateTokenPath('Konnte kein Token finden');
                         return;
                     }
@@ -658,7 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const currentState = button.getAttribute('data-active') === 'true';
                 button.setAttribute('data-active', String(!currentState));
                 if (originalLrcContent) {
-                    byId<HTMLTextAreaElement>('output').value = convertLrc(originalLrcContent);
+                    byId<HTMLTextAreaElement>('output').value = convertLrc(originalLrcContent, readTextOptions());
                 }
             });
         }
@@ -686,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tab && tab.url && tab.url.includes('suno.com/song/') && tab.id !== undefined) {
             sendLrcRequest(tab.id, { action: 'GET_LRC_DATA' }, (response, lastError) => {
                 if (lastError) {
-                    console.error('Error:', lastError);
+                    logger.error('Error:', lastError);
                     let msg = t('error_loading');
                     if (lastError.message && lastError.message.indexOf('Receiving end does not exist') !== -1) {
                         msg += '\n\n(ContentScript nicht geladen: bitte Tab neu laden / Seite refreshen)';

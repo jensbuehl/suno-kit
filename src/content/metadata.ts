@@ -1,3 +1,4 @@
+import { CDN_BASE } from '../shared/config';
 import type { SongMetadata } from '../shared/types';
 
 /** Extracts title, artist, and media URLs from the current Suno song page. */
@@ -86,10 +87,10 @@ export function extractSongMetadata(): SongMetadata {
     // Ensure both URLs exist by falling back to the conventional CDN paths.
     const songId = window.location.pathname.split('/')[2];
     if (!metadata.mediaUrls.image) {
-        metadata.mediaUrls.image = `https://cdn1.suno.ai/${songId}/cover.jpg`;
+        metadata.mediaUrls.image = `${CDN_BASE}/${songId}/cover.jpg`;
     }
     if (!metadata.mediaUrls.video) {
-        metadata.mediaUrls.video = `https://cdn1.suno.ai/${songId}/visualizer.mp4`;
+        metadata.mediaUrls.video = `${CDN_BASE}/${songId}/visualizer.mp4`;
     }
 
     return metadata;

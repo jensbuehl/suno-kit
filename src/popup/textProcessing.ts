@@ -1,0 +1,157 @@
+// Pure lyric/text-processing helpers. No DOM or extension API access, so these
+// are unit-testable in isolation.
+
+export interface TextOptions {
+    removePunct: boolean;
+    toUpper: boolean;
+    toLower: boolean;
+}
+
+// Punctuation characters stripped during text cleaning.
+const PUNCTUATION_TO_REMOVE = [
+    '-', ',', '?', '*', '"', '–', '!', '„', '“',
+    '.', ':', '”', '‘',
+    ';', '¿', '¡', '…', '—', '(', ')', '{', '}', '/', '\\',
+    '«', '»', '‹', '›', '〈', '〉', '《', '》', '〔', '〕',
+    '~'
+];
+
+export function removePunctuation(text: string): string {
+    let result = text;
+    for (const char of PUNCTUATION_TO_REMOVE) {
+        while (result.indexOf(char) !== -1) {
+            result = result.replace(char, '');
+        }
+    }
+
+    // Remove emojis across the common Unicode ranges.
+    result = result.replace(/[\u{1F600}-\u{1F64F}]/gu, '');
+    result = result.replace(/[\u{1F300}-\u{1F5FF}]/gu, '');
+    result = result.replace(/[\u{1F680}-\u{1F6FF}]/gu, '');
+    result = result.replace(/[\u{1F1E0}-\u{1F1FF}]/gu, '');
+    result = result.replace(/[\u{2600}-\u{26FF}]/gu, '');
+    result = result.replace(/[\u{2700}-\u{27BF}]/gu, '');
+    result = result.replace(/[\u{1F900}-\u{1F9FF}]/gu, '');
+    result = result.replace(/[\u{1FA70}-\u{1FAFF}]/gu, '');
+
+    return result.replace(/\s+/g, ' ').trim();
+}
+
+/** Strips characters that are illegal in filenames. */
+export function cleanFilename(filename: string): string {
+    return filename
+        .replace(/[<>:"/|?*]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+/** Removes square brackets and their contents (always applied first). */
+export function removeBrackets(text: string): string {
+    return text.replace(/\[[^\]]*\]/g, '');
+}
+
+export function cleanLyricsText(text: string): string {
+    return text
+        .replace(/([(])\s+/g, '$1') // remove space directly after an opening bracket
+        .replace(/„ +/g, '„') // remove spaces after German opening quotes
+        .replace(/“ +/g, '“') // remove spaces after double quotes
+        .replace(/‘ +/g, '‘') // remove spaces after single quotes
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+/** Applies the active cleaning options to a piece of lyric text. */
+export function applyTextOptions(text: string, opts: TextOptions): string {
+    text = removeBrackets(text);
+    if (opts.removePunct) text = removePunctuation(text);
+    if (opts.toUpper) text = text.toUpperCase();
+    if (opts.toLower) text = text.toLowerCase();
+    return text;
+}
+
+/** Reformats raw LRC into one line per verse, applying the chosen options. */
+export function convertLrc(lrcContent: string, opts: TextOptions): string {
+    const lines = lrcContent.split('\n');
+    let result = '';
+    let currentVerse: string[] = [];
+    let firstTimestamp = '';
+
+    function flushVerse(): void {
+        if (currentVerse.length === 0) return;
+        const verseText = cleanLyricsText(applyTextOptions(currentVerse.join(' ').trim(), opts));
+        result += `[${firstTimestamp}]${verseText}\n`;
+        currentVerse = [];
+        firstTimestamp = '';
+    }
+
+    for (const line of lines) {
+        if (line.trim() === '') {
+            flushVerse();
+            continue;
+        }
+
+        const timeMatches: string[] = [];
+        let textPart = line;
+        let pos = 0;
+
+        while (pos < textPart.length) {
+            const openBracketPos = textPart.indexOf('[', pos);
+            if (openBracketPos === -1) break;
+
+            const closeBracketPos = textPart.indexOf(']', openBracketPos);
+            if (closeBracketPos === -1) break;
+
+            const content = textPart.substring(openBracketPos + 1, closeBracketPos);
+            if (/^\d{2}:\d{2}\.\d{2,3}$/.test(content)) {
+                timeMatches.push(content);
+            }
+            textPart = textPart.substring(0, openBracketPos) + textPart.substring(closeBracketPos + 1);
+            pos = openBracketPos;
+        }
+
+        textPart = textPart.trim();
+
+        if (timeMatches.length > 0 && firstTimestamp === '') {
+            firstTimestamp = timeMatches[0];
+        }
+
+        if (textPart) {
+            textPart = applyTextOptions(textPart, opts);
+            if (textPart) currentVerse.push(textPart);
+        }
+    }
+
+    flushVerse();
+
+    return result.trim();
+}
+
+/** Duplicates the last LRC line +2 seconds (workaround for the Vizzy player). */
+export function addVizzyWorkaround(lrcContent: string): string {
+    if (!lrcContent || !lrcContent.trim()) return lrcContent;
+
+    const lines = lrcContent.trim().split('\n');
+    if (lines.length === 0) return lrcContent;
+
+    const lastLine = lines[lines.length - 1];
+    const timestampMatch = lastLine.match(/^\[(\d{2}):(\d{2})\.(\d{2})\]/);
+    if (!timestampMatch) return lrcContent;
+
+    let minutes = parseInt(timestampMatch[1], 10);
+    let seconds = parseInt(timestampMatch[2], 10);
+    const milliseconds = parseInt(timestampMatch[3], 10);
+
+    seconds += 2;
+    if (seconds >= 60) {
+        minutes += Math.floor(seconds / 60);
+        seconds = seconds % 60;
+    }
+
+    const newTimestamp =
+        `${String(minutes).padStart(2, '0')}:` +
+        `${String(seconds).padStart(2, '0')}.` +
+        `${String(milliseconds).padStart(2, '0')}`;
+
+    const duplicatedLine = lastLine.replace(/^\[\d{2}:\d{2}\.\d{2}\]/, `[${newTimestamp}]`);
+    return `${lrcContent}\n${duplicatedLine}`;
+}

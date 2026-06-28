@@ -44,6 +44,7 @@ was reloaded), the popup injects it on demand via `chrome.scripting`.
 | `cookies` | Read the Suno session cookie used as the API bearer token. |
 | `downloads` | Save the LRC / MP3 / cover / video files. |
 | `scripting` | Inject the content script on demand when it isn't already loaded. |
+| `storage` | Persist the selected UI language. |
 | `host_permissions: suno.com, auth.suno.com` | Fetch lyrics/media and read auth cookies. |
 
 ## Development

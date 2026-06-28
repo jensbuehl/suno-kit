@@ -1,3 +1,4 @@
+import { logger } from '../shared/logger';
 import type { GetCookiesResponse, TokenCandidate, TokenOption } from '../shared/types';
 
 export interface TokenDiscoveryResult {
@@ -35,7 +36,7 @@ function getCookiesViaExtension(domains: string[]): Promise<chrome.cookies.Cooki
                 { action: 'FC_GET_SUNO_COOKIES', domains },
                 (response: GetCookiesResponse) => {
                     if (chrome.runtime.lastError || !response || !Array.isArray(response.cookies)) {
-                        console.warn(
+                        logger.warn(
                             'Konnte Cookies nicht ueber chrome.cookies abrufen',
                             chrome.runtime.lastError
                         );
@@ -45,7 +46,7 @@ function getCookiesViaExtension(domains: string[]): Promise<chrome.cookies.Cooki
                 }
             );
         } catch (err) {
-            console.warn('Fehler beim Anfordern der Cookies via Background', err);
+            logger.warn('Fehler beim Anfordern der Cookies via Background', err);
             resolve([]);
         }
     });
@@ -80,7 +81,7 @@ export async function getBearerTokenFromBrowser(): Promise<TokenDiscoveryResult>
             }
         }
     } catch (e) {
-        console.warn('Fehler beim Auslesen der chrome.cookies Daten fuer Bearer-Token', e);
+        logger.warn('Fehler beim Auslesen der chrome.cookies Daten fuer Bearer-Token', e);
     }
 
     // 2) document.cookie (non-HttpOnly cookies)
@@ -103,7 +104,7 @@ export async function getBearerTokenFromBrowser(): Promise<TokenDiscoveryResult>
             }
         }
     } catch (e) {
-        console.warn('Fehler beim Auslesen der Cookies fuer Bearer-Token', e);
+        logger.warn('Fehler beim Auslesen der Cookies fuer Bearer-Token', e);
     }
 
     // 3) localStorage entries related to Clerk / Suno auth
@@ -151,7 +152,7 @@ export async function getBearerTokenFromBrowser(): Promise<TokenDiscoveryResult>
             }
         }
     } catch (e) {
-        console.warn('Fehler beim Auslesen von localStorage fuer Bearer-Token', e);
+        logger.warn('Fehler beim Auslesen von localStorage fuer Bearer-Token', e);
     }
 
     const options: TokenOption[] = [];
@@ -164,7 +165,7 @@ export async function getBearerTokenFromBrowser(): Promise<TokenDiscoveryResult>
     }
 
     if (!candidates.length) {
-        console.warn('Kein JWT-Kandidat in Cookies/localStorage gefunden');
+        logger.warn('Kein JWT-Kandidat in Cookies/localStorage gefunden');
     }
 
     return { candidates, debug: debugText, options, indexById };

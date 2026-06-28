@@ -1,3 +1,4 @@
+import { logger } from '../shared/logger';
 import type { GetLrcDataRequest, LrcDataResponse, TokenCandidate } from '../shared/types';
 import { extractSongMetadata } from './metadata';
 import { fetchAlignedWordsWithToken } from './sunoApi';
@@ -10,7 +11,7 @@ async function getLrcData(preferredOptionId?: string): Promise<LrcDataResponse> 
     const preferredId = typeof preferredOptionId === 'string' && preferredOptionId ? preferredOptionId : 'auto';
 
     if (!songId) {
-        console.error('Could not extract song ID from URL');
+        logger.error('Could not extract song ID from URL');
         return {
             songId: null,
             lrcContent: null,

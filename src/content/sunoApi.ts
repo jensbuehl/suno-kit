@@ -1,9 +1,10 @@
+import { STUDIO_API_BASE } from '../shared/config';
+import { logger } from '../shared/logger';
+
 export interface AlignedWord {
     word: string;
     start_s: number;
 }
-
-const STUDIO_API = 'https://studio-api.prod.suno.com/api/gen';
 
 /**
  * Fetches time-aligned lyrics for a song using a bearer token.
@@ -14,7 +15,7 @@ export async function fetchAlignedWordsWithToken(
     bearerToken: string
 ): Promise<AlignedWord[] | null> {
     try {
-        const response = await fetch(`${STUDIO_API}/${songId}/aligned_lyrics/v2/`, {
+        const response = await fetch(`${STUDIO_API_BASE}/${songId}/aligned_lyrics/v2/`, {
             headers: {
                 Authorization: `Bearer ${bearerToken}`,
                 'Content-Type': 'application/json'
@@ -24,7 +25,7 @@ export async function fetchAlignedWordsWithToken(
         const data = await response.json();
         return data.aligned_words && data.aligned_words.length ? data.aligned_words : null;
     } catch (e) {
-        console.warn('Token-Versuch fehlgeschlagen:', e);
+        logger.warn('Token-Versuch fehlgeschlagen:', e);
         return null;
     }
 }
