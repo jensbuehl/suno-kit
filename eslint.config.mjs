@@ -35,5 +35,14 @@ export default [
             sourceType: 'module',
             globals: { ...globals.node }
         }
+    },
+    {
+        // Unit tests run under Vitest/Node.
+        files: ['tests/**/*.ts'],
+        languageOptions: {
+            ecmaVersion: 2022,
+            sourceType: 'module',
+            globals: { ...globals.node }
+        }
     }
 ];

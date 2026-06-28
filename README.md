@@ -57,9 +57,13 @@ npm run build      # bundle src/ -> dist/
 npm run watch      # rebuild on change
 npm run typecheck  # tsc --noEmit
 npm run lint       # ESLint
-npm run check      # typecheck + lint
+npm run test       # Vitest unit tests (pure logic)
+npm run check      # typecheck + lint + test
 npm run format     # format with Prettier
 ```
+
+Unit tests cover the pure logic (LRC conversion, text cleaning, filename
+sanitisation, timestamp formatting, JWT detection) under `tests/`.
 
 ### Load the extension
 
