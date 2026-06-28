@@ -7,7 +7,7 @@ var currentLang = 'de'; // Default language
 // Language strings
 var i18n = {
 de: {
-title: "Fightclub SUNO Tool",
+title: "SUNO Copilot",
 subtitle: "More than Battlerap!",
 remove_punctuation: "Text bereinigen",
 to_upper: "ALLES GROSS",
@@ -36,7 +36,7 @@ placeholder: "Lade Lyrics, Hurensohn!"
     selection_label: "Auswahl"
 },
 en: {
-title: "Fightclub SUNO Tool",
+title: "SUNO Copilot",
 subtitle: "More than Battlerap!",
 remove_punctuation: "Clean text",
 to_upper: "UPPERCASE",
@@ -205,6 +205,35 @@ result = result.replace(/\s+/g, ' ').trim();
 return result;
 }
 
+// Sends a message to the content script, injecting it on demand if it isn't
+// loaded yet. A manifest-declared content script is only injected when a page
+// loads, so right after the extension is (re)loaded an already-open Suno tab has
+// no content script until it is refreshed. In that case sendMessage fails with
+// "Receiving end does not exist"; we then inject contentScript.js and retry once.
+function sendLrcRequest(tabId, message, callback) {
+    chrome.tabs.sendMessage(tabId, message, function(response) {
+        var err = chrome.runtime.lastError;
+        var notInjected = err && /Receiving end does not exist|Could not establish connection/i.test(err.message || '');
+        if (!notInjected) {
+            callback(response, err);
+            return;
+        }
+
+        chrome.scripting.executeScript({
+            target: { tabId: tabId },
+            files: ['contentScript.js']
+        }, function() {
+            if (chrome.runtime.lastError) {
+                callback(undefined, chrome.runtime.lastError);
+                return;
+            }
+            chrome.tabs.sendMessage(tabId, message, function(retryResponse) {
+                callback(retryResponse, chrome.runtime.lastError);
+            });
+        });
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
 // Load saved language preference
 var savedLang = localStorage.getItem('suno-lyrics-lang') || 'de';
@@ -232,10 +261,10 @@ if (tokenSelect) {
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
             if (!tabs[0] || !tabs[0].id) return;
             isRefreshingFromDropdown = true;
-            chrome.tabs.sendMessage(tabs[0].id, {action: "GET_LRC_DATA", tokenOptionId: tokenOptionId}, function(response) {
+            sendLrcRequest(tabs[0].id, {action: "GET_LRC_DATA", tokenOptionId: tokenOptionId}, function(response, lastError) {
                 isRefreshingFromDropdown = false;
-                if (chrome.runtime.lastError) {
-                    console.error("Error:", chrome.runtime.lastError);
+                if (lastError) {
+                    console.error("Error:", lastError);
                     updateTokenPath('Konnte kein Token finden');
                     return;
                 }
@@ -345,11 +374,11 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
 // Get the active tab and request LRC data
 chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
     if (tabs[0] && tabs[0].url && tabs[0].url.includes('suno.com/song/')) {
-        chrome.tabs.sendMessage(tabs[0].id, {action: "GET_LRC_DATA"}, function(response) {
-            if (chrome.runtime.lastError) {
-                console.error("Error:", chrome.runtime.lastError);
+        sendLrcRequest(tabs[0].id, {action: "GET_LRC_DATA"}, function(response, lastError) {
+            if (lastError) {
+                console.error("Error:", lastError);
                 var msg = i18n[currentLang].error_loading;
-                var lastErrMsg = chrome.runtime.lastError && chrome.runtime.lastError.message;
+                var lastErrMsg = lastError && lastError.message;
                 if (lastErrMsg && lastErrMsg.indexOf('Receiving end does not exist') !== -1) {
                     msg += "\n\n(ContentScript nicht geladen: bitte Tab neu laden / Seite refreshen)";
                 }
@@ -452,7 +481,7 @@ chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 // Function to clean filename
 function cleanFilename(filename) {
 return filename
-.replace(/[<>:"/\|?*]/g, '')
+.replace(/[<>:"/|?*]/g, '')
 .replace(/\s+/g, ' ')
 .trim();
 }
@@ -465,7 +494,7 @@ function removeBrackets(text) {
 
 function cleanLyricsText(text) {
     return text
-        .replace(/([\(])\s+/g, '$1') // remove space directly after opening brackets: (
+        .replace(/([(])\s+/g, '$1') // remove space directly after opening brackets: (
         .replace(/„ +/g, '„')  // Remove spaces after German opening quotes
         .replace(/" +/g, '"')  // Remove spaces after double quotes
         .replace(/’ +/g, '’')  // Remove spaces after single quotes
@@ -483,10 +512,11 @@ async function checkVideoAvailability(videoUrl) {
     try {
         console.log('[Video Check] Testing video accessibility:', videoUrl);
         
-        // Try to fetch with a HEAD request to check if the resource exists
-        const response = await fetch(videoUrl, {
+        // Try to fetch with a HEAD request to check if the resource exists.
+        // no-cors gives us no response details, so the result is intentionally ignored.
+        await fetch(videoUrl, {
             method: 'HEAD',
-            mode: 'no-cors'  // This will succeed but we won't get response details
+            mode: 'no-cors'
         });
         
         // Since no-cors doesn't give us status, try a different approach
@@ -558,27 +588,38 @@ function addVizzyWorkaround(lrcContent) {
     return lrcContent + '\n' + duplicatedLine;
 }
 
+// Triggers a browser download for a song media file. Shared by the MP3, cover,
+// and video buttons; config = { type, url, suffix, successStatus? }.
+function downloadMedia(config) {
+    if (!songId || !config.url) {
+        console.error('Cannot download ' + config.type + ': missing songId or URL');
+        showStatus(i18n[currentLang].status_error, 'error');
+        return;
+    }
+    var filename = cleanFilename(artistName + ' - ' + songTitle) + config.suffix;
+
+    chrome.downloads.download({
+        url: config.url,
+        filename: filename,
+        saveAs: false
+    }, function(downloadId) {
+        if (chrome.runtime.lastError) {
+            console.error('Download failed:', chrome.runtime.lastError);
+            showStatus(i18n[currentLang].status_error, 'error');
+        } else {
+            showStatus(config.successStatus || i18n[currentLang].status_downloaded, 'success');
+        }
+    });
+}
+
 // Function to download MP3
 function downloadMp3() {
-if (!songId) {
-showStatus(i18n[currentLang].status_error, 'error');
-return;
-}
-var mp3Url = 'https://cdn1.suno.ai/' + songId + '.mp3';
-var filename = cleanFilename(artistName + ' - ' + songTitle) + '.mp3';
-
-chrome.downloads.download({
-    url: mp3Url,
-    filename: filename,
-    saveAs: false
-}, function(downloadId) {
-    if (chrome.runtime.lastError) {
-        console.error('Download failed:', chrome.runtime.lastError);
-        showStatus(i18n[currentLang].status_error, 'error');
-    } else {
-        showStatus(i18n[currentLang].status_mp3_started, 'success');
-    }
-});
+    downloadMedia({
+        type: 'mp3',
+        url: 'https://cdn1.suno.ai/' + songId + '.mp3',
+        suffix: '.mp3',
+        successStatus: i18n[currentLang].status_mp3_started
+    });
 }
 
 // Function to download LRC file
@@ -608,104 +649,80 @@ document.body.removeChild(a);
 showStatus(i18n[currentLang].status_downloaded, 'success');
 }
 
+// Applies the active text-cleaning options to a piece of lyric text.
+// Brackets are ALWAYS removed first, before any other processing.
+function applyTextOptions(text, opts) {
+    text = removeBrackets(text);
+    if (opts.removePunct) text = removePunctuation(text);
+    if (opts.toUpper) text = text.toUpperCase();
+    if (opts.toLower) text = text.toLowerCase();
+    return text;
+}
+
 // Function to convert LRC
 function convertLrc(lrcContent) {
-var lines = lrcContent.split('\n');
-var result = '';
-var currentVerse = [];
-var firstTimestamp = '';
-var lastTimestamp = '';
-var removePunct = document.getElementById('removePunct').getAttribute('data-active') === 'true';
-var toUpper = document.getElementById('toUpper').getAttribute('data-active') === 'true';
-var toLower = document.getElementById('toLower').getAttribute('data-active') === 'true';
+    var lines = lrcContent.split('\n');
+    var result = '';
+    var currentVerse = [];
+    var firstTimestamp = '';
+    var opts = {
+        removePunct: document.getElementById('removePunct').getAttribute('data-active') === 'true',
+        toUpper: document.getElementById('toUpper').getAttribute('data-active') === 'true',
+        toLower: document.getElementById('toLower').getAttribute('data-active') === 'true'
+    };
 
-for (var i = 0; i < lines.length; i++) {
-    var line = lines[i];
-    var trimmedLine = line.trim();
-    
-    if (trimmedLine === '') {
-        if (currentVerse.length > 0) {
-            var verseText = currentVerse.join(' ').trim();
+    function flushVerse() {
+        if (currentVerse.length === 0) return;
+        var verseText = cleanLyricsText(applyTextOptions(currentVerse.join(' ').trim(), opts));
+        result += '[' + firstTimestamp + ']' + verseText + '\n';
+        currentVerse = [];
+        firstTimestamp = '';
+    }
 
-            // ALWAYS remove brackets first, before any other processing
-            verseText = removeBrackets(verseText);
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
 
-            if (removePunct) {
-                verseText = removePunctuation(verseText);
+        if (line.trim() === '') {
+            flushVerse();
+            continue;
+        }
+
+        var timeMatches = [];
+        var textPart = line;
+        var pos = 0;
+
+        while (pos < textPart.length) {
+            var openBracketPos = textPart.indexOf('[', pos);
+            if (openBracketPos === -1) break;
+
+            var closeBracketPos = textPart.indexOf(']', openBracketPos);
+            if (closeBracketPos === -1) break;
+
+            var content = textPart.substring(openBracketPos + 1, closeBracketPos);
+            if (/^\d{2}:\d{2}\.\d{2,3}$/.test(content)) {
+                // This is a timestamp - keep it for timing
+                timeMatches.push(content);
             }
-            
-            if (toUpper) verseText = verseText.toUpperCase();
-            if (toLower) verseText = verseText.toLowerCase();
-            
-            verseText = cleanLyricsText(verseText);
-            result += '[' + firstTimestamp + ']' + verseText + '\n';
-            currentVerse = [];
-            firstTimestamp = '';
+            // Remove ALL square brackets and their contents (timestamps and any other content)
+            textPart = textPart.substring(0, openBracketPos) + textPart.substring(closeBracketPos + 1);
+            pos = openBracketPos;
         }
-        continue;
-    }
 
-    var timeMatches = [];
-    var textPart = line;
-    var pos = 0;
-    
-    while (pos < textPart.length) {
-        var openBracketPos = textPart.indexOf('[', pos);
-        if (openBracketPos === -1) break;
-        
-        var closeBracketPos = textPart.indexOf(']', openBracketPos);
-        if (closeBracketPos === -1) break;
-        
-        var content = textPart.substring(openBracketPos + 1, closeBracketPos);
-        
-        if (/^\d{2}:\d{2}\.\d{2,3}$/.test(content)) {
-            // This is a timestamp - keep it for timing
-            timeMatches.push({'1': content});
+        textPart = textPart.trim();
+
+        if (timeMatches.length > 0 && firstTimestamp === '') {
+            firstTimestamp = timeMatches[0];
         }
-        // Remove ALL square brackets and their contents (timestamps and any other content)
-        textPart = textPart.substring(0, openBracketPos) + textPart.substring(closeBracketPos + 1);
-        pos = openBracketPos;
-    }
-    
-    textPart = textPart.trim();
 
-    if (timeMatches.length > 0) {
-        lastTimestamp = timeMatches[0]['1'];
-        if (firstTimestamp === '') firstTimestamp = lastTimestamp;
-    }
-
-    if (textPart) {
-        // ALWAYS remove brackets first, before any other processing
-        textPart = removeBrackets(textPart);
-        
-        if (removePunct) {
-            textPart = removePunctuation(textPart);
+        if (textPart) {
+            textPart = applyTextOptions(textPart, opts);
+            if (textPart) currentVerse.push(textPart);
         }
-        if (toUpper) textPart = textPart.toUpperCase();
-        if (toLower) textPart = textPart.toLowerCase();
-
-        if (textPart) currentVerse.push(textPart);
     }
-}
 
-if (currentVerse.length > 0) {
-    var verseText = currentVerse.join(' ').trim();
-    
-    // ALWAYS remove brackets first, before any other processing
-    verseText = removeBrackets(verseText);
-    
-    if (removePunct) {
-        verseText = removePunctuation(verseText);
-    }
-    
-    if (toUpper) verseText = verseText.toUpperCase();
-    if (toLower) verseText = verseText.toLowerCase();
-    
-    verseText = cleanLyricsText(verseText);
-    result += '[' + firstTimestamp + ']' + verseText + '\n';
-}
+    flushVerse();
 
-return result.trim();
+    return result.trim();
 }
 
 // Function to copy to clipboard
@@ -726,73 +743,19 @@ showStatus(i18n[currentLang].status_nothing, 'error');
 
 // Function to download cover image
 function downloadCover() {
-    console.log('Download cover clicked. State:', {
-        hasSongId: !!songId,
-        hasMediaUrls: !!window.mediaUrls,
-        mediaUrls: window.mediaUrls,
-        imageUrl: window.mediaUrls?.image
-    });
-
-    if (!songId || !window.mediaUrls?.image) {
-        console.error('Cannot download cover: missing songId or image URL');
-        showStatus(i18n[currentLang].status_error, 'error');
-        return;
-    }
-    var filename = cleanFilename(artistName + ' - ' + songTitle) + ' (Cover).jpg';
-
-    console.log('Starting cover download:', {
-        url: window.mediaUrls.image,
-        filename: filename
-    });
-
-    chrome.downloads.download({
-        url: window.mediaUrls.image,
-        filename: filename,
-        saveAs: false
-    }, function(downloadId) {
-        if (chrome.runtime.lastError) {
-            console.error('Download failed:', chrome.runtime.lastError);
-            showStatus(i18n[currentLang].status_error, 'error');
-        } else {
-            console.log('Cover download started with ID:', downloadId);
-            showStatus(i18n[currentLang].status_downloaded, 'success');
-        }
+    downloadMedia({
+        type: 'cover',
+        url: window.mediaUrls?.image,
+        suffix: ' (Cover).jpg'
     });
 }
 
 // Function to download cover video
 function downloadVideo() {
-    console.log('Download video clicked. State:', {
-        hasSongId: !!songId,
-        hasMediaUrls: !!window.mediaUrls,
-        mediaUrls: window.mediaUrls,
-        videoUrl: window.mediaUrls?.video
-    });
-
-    if (!songId || !window.mediaUrls?.video) {
-        console.error('Cannot download video: missing songId or video URL');
-        showStatus(i18n[currentLang].status_error, 'error');
-        return;
-    }
-    var filename = cleanFilename(artistName + ' - ' + songTitle) + ' (Video).mp4';
-
-    console.log('Starting video download:', {
-        url: window.mediaUrls.video,
-        filename: filename
-    });
-
-    chrome.downloads.download({
-        url: window.mediaUrls.video,
-        filename: filename,
-        saveAs: false
-    }, function(downloadId) {
-        if (chrome.runtime.lastError) {
-            console.error('Download failed:', chrome.runtime.lastError);
-            showStatus(i18n[currentLang].status_error, 'error');
-        } else {
-            console.log('Video download started with ID:', downloadId);
-            showStatus(i18n[currentLang].status_downloaded, 'success');
-        }
+    downloadMedia({
+        type: 'video',
+        url: window.mediaUrls?.video,
+        suffix: ' (Video).mp4'
     });
 }
 
