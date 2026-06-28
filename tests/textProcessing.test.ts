@@ -4,6 +4,7 @@ import {
     cleanFilename,
     convertLrc,
     removePunctuation,
+    stripTimestamps,
     type TextOptions
 } from '../src/popup/textProcessing';
 
@@ -56,6 +57,31 @@ describe('convertLrc', () => {
 
     it('returns empty string for empty input', () => {
         expect(convertLrc('', NONE)).toBe('');
+    });
+});
+
+describe('stripTimestamps', () => {
+    it('removes a leading [mm:ss.xx] from each line', () => {
+        expect(stripTimestamps('[00:01.00]Hello\n[00:05.00]World')).toBe('Hello\nWorld');
+    });
+
+    it('supports 3-digit millisecond timestamps', () => {
+        expect(stripTimestamps('[00:01.000]Hi')).toBe('Hi');
+    });
+
+    it('leaves lines without a timestamp untouched', () => {
+        expect(stripTimestamps('no timestamp here')).toBe('no timestamp here');
+    });
+
+    it('composes with convertLrc output (timestamps-off render)', () => {
+        const timed = convertLrc('[00:01.00]Hello!\n[00:02.50]there', CLEAN);
+        expect(stripTimestamps(timed)).toBe('Hello there');
+    });
+
+    it('still works after stacked Clean + uppercase options', () => {
+        const timed = convertLrc('[00:01.00]Hello, world!', { removePunct: true, toUpper: true, toLower: false });
+        expect(timed).toBe('[00:01.00]HELLO WORLD');
+        expect(stripTimestamps(timed)).toBe('HELLO WORLD');
     });
 });
 

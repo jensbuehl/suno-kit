@@ -20,6 +20,27 @@ export function makeCandidateId(candidate: TokenCandidate): string {
     return `${candidate.path || 'Weg ?'}|${candidate.source || 'unknown'}`;
 }
 
+/**
+ * Human-readable, English description of where a token came from — shown in the
+ * manual token-source fallback so the user understands each alternative instead
+ * of seeing bare numbers. Derived from the candidate's `source`.
+ */
+export function describeCandidate(candidate: TokenCandidate): string {
+    const src = candidate.source || '';
+    if (src.startsWith('cookie-api:')) {
+        const name = src.split('/').pop() || 'session';
+        return `Browser session cookie (${name})`;
+    }
+    if (src.startsWith('cookie:')) {
+        return `Page cookie (${src.slice('cookie:'.length)})`;
+    }
+    if (src.startsWith('localStorage:')) {
+        const key = src.slice('localStorage:'.length);
+        return `Local storage (${key.toLowerCase().includes('clerk') ? 'Clerk session' : key})`;
+    }
+    return src || 'Discovered token';
+}
+
 /** Human-readable description of which path a token came from (for debugging). */
 export function formatPathResult(pathLabel: string, source: string, token: string): string {
     const suffix = token ? token.slice(-10) : '';
@@ -155,13 +176,23 @@ export async function getBearerTokenFromBrowser(): Promise<TokenDiscoveryResult>
         logger.warn('Fehler beim Auslesen von localStorage fuer Bearer-Token', e);
     }
 
+    // Build the selectable options, merging candidates that resolve to the SAME
+    // token (the session cookie is commonly discovered via two paths) so the
+    // user sees one descriptive entry per distinct token rather than duplicates.
     const options: TokenOption[] = [];
     const indexById: Record<string, number> = {};
+    const tokenToIndex = new Map<string, number>();
     for (const candidate of candidates) {
         const id = makeCandidateId(candidate);
-        if (indexById[id]) continue;
-        indexById[id] = options.length + 1;
-        options.push({ id, label: `Weg ${indexById[id]}`, index: indexById[id] });
+        let index = tokenToIndex.get(candidate.token);
+        if (index === undefined) {
+            index = options.length + 1;
+            tokenToIndex.set(candidate.token, index);
+            options.push({ id, label: describeCandidate(candidate), index });
+        }
+        // Map every candidate id (incl. merged duplicates) to its option index so
+        // selection-matching and the debug path still resolve.
+        if (!indexById[id]) indexById[id] = index;
     }
 
     if (!candidates.length) {

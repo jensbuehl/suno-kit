@@ -5,12 +5,15 @@
 export interface MediaUrls {
     image: string;
     video: string;
+    audio?: string; // extracted from the embedded Next.js JSON (player / MP3 / ZIP)
 }
 
 export interface SongMetadata {
     title: string;
     artist: string;
     mediaUrls: MediaUrls;
+    duration?: string; // optional, best-effort from embedded JSON
+    model?: string; // optional, best-effort from embedded JSON
 }
 
 /** A bearer-token candidate discovered in cookies / localStorage. */
@@ -39,6 +42,8 @@ export interface LrcDataResponse {
     title?: string;
     artist?: string;
     mediaUrls?: MediaUrls | null;
+    duration?: string; // optional, best-effort passthrough
+    model?: string; // optional, best-effort passthrough
     tokenDebugPath: string;
     tokenOptions: TokenOption[];
     tokenSelectedId: string;

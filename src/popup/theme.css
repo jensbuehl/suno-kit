@@ -1,0 +1,150 @@
+/* ============================================================================
+ * SUNO Copilot — Design Tokens (single source of truth)
+ * ----------------------------------------------------------------------------
+ * Every component references these BARE tokens (var(--accent), var(--bg-app), …)
+ * and never hard-codes a hex / px literal. Re-theming = override one block;
+ * nothing in the components changes. Canonical naming is bare (no --sc- prefix).
+ *
+ * Switch theme at runtime with  data-sc-theme="ember|mono"  on a root element
+ * (default, no attribute = dark). The popup SHIPS DARK ONLY (no user picker);
+ * ember/mono exist purely as proof the theming architecture is one-block-deep.
+ *
+ * NOTE: CSS custom properties work in CSS/`style` but NOT inside SVG
+ * presentation attributes (fill="…"/stroke="…"). For themeable icons, set
+ * stroke/fill="currentColor" and drive `color` from a token on a parent.
+ * ========================================================================== */
+
+/* Fonts bundled locally under public/fonts (no hot-linking — D11). */
+@font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('public/fonts/jetbrains-mono-400.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('public/fonts/jetbrains-mono-500.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Space Grotesk';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('public/fonts/space-grotesk-700.woff2') format('woff2');
+}
+
+:root,
+[data-sc-theme='dark'] {
+    /* — Surfaces — */
+    --backdrop: #0e0e10; /* page/behind-popup */
+    --bg-app: #1a1a1d; /* popup background */
+    --bg-sunken: #161618; /* lyrics box, panels, footer, inputs */
+    --bg-raised: #242426; /* controls, chips, ghost buttons */
+    --skeleton-hi: #303033; /* skeleton shimmer highlight */
+
+    /* — Borders — */
+    --border: #2a2a2e; /* section dividers */
+    --border-control: #38383c; /* control outlines */
+    --border-strong: #45454a; /* hover/active outlines, scrollbar */
+
+    /* — Accent — */
+    --accent: #e03c31; /* primary actions, active states, timestamps */
+    --accent-deep: #7d1812; /* gradient mid (cover/icon tile) */
+    --accent-deeper: #3a1412; /* gradient base */
+    --accent-weak-text: #ff6a5f; /* text on accent-weak fills */
+    --accent-weak-bg: rgba(224, 60, 49, 0.16); /* active pill fill */
+    --accent-glow: rgba(224, 60, 49, 0.18); /* focus ring / icon-tile shadow */
+    --accent-tint: rgba(224, 60, 49, 0.12); /* error circle fill */
+    --accent-tint-bd: rgba(224, 60, 49, 0.4); /* error circle border, video glow */
+    --on-accent: #fff; /* text/icons on solid accent */
+
+    /* — Text — */
+    --text: #fafafa; /* primary */
+    --text-2: #e6e6ea; /* lyric body, list labels */
+    --text-3: #b5b5b5; /* secondary */
+    --text-mut: #6e6e72; /* meta, mono captions, footer */
+
+    /* — Status — */
+    --ok: #3fbf6b; /* connected indicator */
+
+    /* — Radii — */
+    --r-control: 8px;
+    --r-card: 11px;
+    --r-input: 9px;
+    --r-popup: 16px;
+    --r-pill: 999px;
+
+    /* — Spacing — */
+    --pad-card: 14px;
+    --gutter: 16px;
+    --gap: 8px;
+    --gap-tight: 6px;
+
+    /* — Type — */
+    --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-brand: 'Space Grotesk', var(--font-ui);
+    --font-mono: 'JetBrains Mono', Consolas, monospace;
+
+    /* — Elevation — */
+    --shadow-popup: 0 24px 60px rgba(0, 0, 0, 0.55);
+    --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* ===== Alternate theme: Ember (warm orange) — token-proof only ============ */
+[data-sc-theme='ember'] {
+    --backdrop: #100a06;
+    --bg-app: #1c1611;
+    --bg-sunken: #171109;
+    --bg-raised: #2a2016;
+    --skeleton-hi: #352a1d;
+    --border: #2e2418;
+    --border-control: #3d3022;
+    --border-strong: #4d3d2a;
+    --accent: #f7861f;
+    --accent-deep: #8a3d0c;
+    --accent-deeper: #3a1c08;
+    --accent-weak-text: #ffae5c;
+    --accent-weak-bg: rgba(247, 134, 31, 0.16);
+    --accent-glow: rgba(247, 134, 31, 0.18);
+    --accent-tint: rgba(247, 134, 31, 0.12);
+    --accent-tint-bd: rgba(247, 134, 31, 0.4);
+    --on-accent: #fff;
+    --text: #fbf7f2;
+    --text-2: #ece4da;
+    --text-3: #bcae9e;
+    --text-mut: #7a6c5a;
+    --ok: #4fc06b;
+}
+
+/* ===== Alternate theme: Mono (cool slate / indigo accent) — token-proof === */
+[data-sc-theme='mono'] {
+    --backdrop: #0c0d0f;
+    --bg-app: #17181b;
+    --bg-sunken: #131417;
+    --bg-raised: #212327;
+    --skeleton-hi: #2c2f34;
+    --border: #26282c;
+    --border-control: #33363b;
+    --border-strong: #42464c;
+    --accent: #7c8cff;
+    --accent-deep: #2b3380;
+    --accent-deeper: #171a33;
+    --accent-weak-text: #a6b1ff;
+    --accent-weak-bg: rgba(124, 140, 255, 0.16);
+    --accent-glow: rgba(124, 140, 255, 0.18);
+    --accent-tint: rgba(124, 140, 255, 0.12);
+    --accent-tint-bd: rgba(124, 140, 255, 0.4);
+    --on-accent: #fff;
+    --text: #f4f5f7;
+    --text-2: #e2e4e9;
+    --text-3: #b3b7c0;
+    --text-mut: #6c7079;
+    --ok: #46c08a;
+}
+
+/* The dark, ember, and mono blocks above are proof that re-theming touches
+ * exactly one block. Add a light theme the same way (override the same names). */

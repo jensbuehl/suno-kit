@@ -1,49 +1,64 @@
-export type Lang = 'de' | 'en';
+// English-only string map. No DE/EN toggle, no LANG_STORAGE_KEY (spec §7). Kept
+// as a map so future i18n is a localized addition, but the popup ships EN only.
 
-export const LANGS: Lang[] = ['de', 'en'];
+const messages = {
+    // Wordmark
+    brand_sun: 'SUNO',
+    brand_co: 'Copilot',
 
-// Key-first message map: each string's translations live together, so adding a
-// new string is a single entry rather than two edits kept in sync.
-const messages: Record<string, Record<Lang, string>> = {
-    title: { de: 'SUNO Copilot', en: 'SUNO Copilot' },
-    subtitle: { de: 'More than Battlerap!', en: 'More than Battlerap!' },
-    remove_punctuation: { de: 'Text bereinigen', en: 'Clean text' },
-    to_upper: { de: 'ALLES GROSS', en: 'UPPERCASE' },
-    to_lower: { de: 'alles klein', en: 'lowercase' },
-    copy_clipboard: { de: 'Lyrics kopieren', en: 'Copy Lyrics' },
-    download_file: { de: 'Lyrics herunterladen', en: 'Download Lyrics' },
-    download_mp3: { de: 'Audio', en: 'Audio' },
-    download_cover: { de: 'Cover', en: 'Cover' },
-    download_video: { de: 'Video', en: 'Video' },
-    error_loading: {
-        de: 'Fehler beim Laden der Daten. Bitte die Seite neu laden.',
-        en: 'Error loading data. Please reload the page.'
-    },
-    no_content: { de: 'Kein Inhalt verfügbar.', en: 'No content available.' },
-    open_song_page: {
-        de: 'Kein Song gefunden. Bitte öffne eine Hurensuno Song-Seite.',
-        en: 'No Song found. Please open a Hurensuno song page.'
-    },
-    status_loaded: { de: 'Lyrics geladen', en: 'Lyrics loaded' },
-    status_copied: { de: 'Lyrics in die Zwischenablage kopiert', en: 'Lyrics copied' },
-    status_downloaded: { de: 'Datei heruntergeladen', en: 'File downloaded' },
-    status_mp3_started: { de: 'Download gestartet', en: 'MP3 download started!' },
-    status_error: { de: 'Unbekannter Fehler', en: 'Unknown Error' },
-    status_nothing: {
-        de: 'Es gibt nichts zu kopieren, Hurensohn!',
-        en: 'Nothing to copy, motherfucker!'
-    },
-    placeholder: { de: 'Lade Lyrics, Hurensohn!', en: 'Processing Lyrics, bitch!' },
-    token_path_label: { de: 'Token Erkennung', en: 'Token Discovery' },
-    alternative_prefix: { de: 'Alternative', en: 'Alternative' },
-    no_path_found: { de: 'Konnte keinen Weg finden', en: "couldn't find a path" },
-    no_token_found: { de: 'Konnte kein Token finden', en: 'No token found' },
-    auto_label: { de: 'Auto', en: 'Auto' },
-    selection_label: { de: 'Auswahl', en: 'Selection' }
-};
+    // Footer / connection
+    connected: 'Connected',
+    connected_via: 'Connected via session token',
+    not_connected: 'Not connected',
 
-/** Returns the translation for `key` in `lang`, or '' if unknown. */
-export function translate(key: string, lang: Lang): string {
-    const entry = messages[key];
-    return entry ? entry[lang] : '';
+    // Lyrics toolbar + actions
+    timestamps: 'Timestamps',
+    clean: 'Clean',
+    copy_lyrics: 'Copy lyrics',
+    download_lrc: '.lrc',
+
+    // Asset downloads
+    download_mp3: 'Download MP3',
+    download_cover: 'Download cover',
+    download_video: 'Download video',
+
+    // Tabs
+    tab_lyrics: 'Lyrics',
+    tab_audio: 'Audio',
+    tab_cover: 'Cover',
+    tab_video: 'Video',
+
+    // Empty state
+    empty_title: 'No Suno song detected',
+    empty_body: 'Open a song on suno.com to get started.',
+    open_suno: 'Open suno.com',
+
+    // Loading
+    loading_text: 'Fetching lyrics…',
+
+    // Error state
+    error_title: "Couldn't read your session",
+    error_body: "We couldn't find your Suno token. Make sure you're signed in at suno.com.",
+    reconnect: 'Reconnect',
+    try_other: 'Choose token source manually',
+    retry_with: 'Retry with this source',
+    manual_hint: 'Only change this if auto-detection picks the wrong token.',
+    token_auto: 'Automatic (recommended)',
+
+    // ZIP package
+    download_all: 'Download all as ZIP',
+    zip_label: 'ZIP',
+    package_title: 'Download package',
+    zip_nothing: 'Select at least 1 file',
+    zip_download: 'Download ZIP',
+
+    // Errors
+    asset_failed: "Couldn't fetch this file"
+} as const;
+
+export type MessageKey = keyof typeof messages;
+
+/** Returns the English string for `key` (empty string if unknown). */
+export function t(key: MessageKey): string {
+    return messages[key] ?? '';
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isLikelyJwt, makeCandidateId } from '../src/content/tokenDiscovery';
+import { describeCandidate, isLikelyJwt, makeCandidateId } from '../src/content/tokenDiscovery';
 
 describe('isLikelyJwt', () => {
     it('accepts a three-part base64url token', () => {
@@ -27,6 +27,26 @@ describe('makeCandidateId', () => {
     it('combines path and source', () => {
         expect(makeCandidateId({ token: 't', source: 'cookie:__session', path: 'Weg 2' })).toBe(
             'Weg 2|cookie:__session'
+        );
+    });
+});
+
+describe('describeCandidate', () => {
+    it('describes a browser session cookie by name', () => {
+        expect(describeCandidate({ token: 't', source: 'cookie-api:auth.suno.com/__client', path: 'Weg 1' })).toBe(
+            'Browser session cookie (__client)'
+        );
+    });
+
+    it('describes a page cookie by name', () => {
+        expect(describeCandidate({ token: 't', source: 'cookie:__session', path: 'Weg 2' })).toBe(
+            'Page cookie (__session)'
+        );
+    });
+
+    it('labels Clerk local storage clearly', () => {
+        expect(describeCandidate({ token: 't', source: 'localStorage:clerk.client.abc', path: 'Weg 3' })).toBe(
+            'Local storage (Clerk session)'
         );
     });
 });

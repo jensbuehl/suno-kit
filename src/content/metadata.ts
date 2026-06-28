@@ -1,6 +1,14 @@
 import { CDN_BASE } from '../shared/config';
 import type { SongMetadata } from '../shared/types';
 
+/** Formats a duration in seconds (possibly fractional) as "m:ss". */
+function formatSeconds(seconds: number): string {
+    const total = Math.round(seconds);
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+}
+
 /** Extracts title, artist, and media URLs from the current Suno song page. */
 export function extractSongMetadata(): SongMetadata {
     const metadata: SongMetadata = {
@@ -51,46 +59,64 @@ export function extractSongMetadata(): SongMetadata {
         }
     }
 
-    // Method 4: React/Next.js data embedded in <script> tags
+    // Method 4: data embedded in <script> tags. Suno streams it as ESCAPED JSON
+    // inside self.__next_f.push("…\"audio_url\":\"…\"…"), so JSON.parse fails and a
+    // naive `"key"` regex never matches the `\"key\"` text. We unescape each
+    // candidate script first, then pull the real values out of it.
     const scripts = document.getElementsByTagName('script');
     for (let i = 0; i < scripts.length; i++) {
-        const scriptContent = scripts[i].textContent;
-        if (scriptContent && scriptContent.includes('display_name')) {
-            try {
-                const data = JSON.parse(scriptContent);
-                if (data?.props?.pageProps) {
-                    metadata.mediaUrls.image = metadata.mediaUrls.image || data.props.pageProps.imageUrl;
-                    metadata.mediaUrls.video = metadata.mediaUrls.video || data.props.pageProps.videoUrl;
-                }
-            } catch {
-                // Not valid JSON - fall back to regex extraction.
-                const displayNameMatch = scriptContent.match(/"display_name"\s*:\s*"([^"]+)"/);
-                if (displayNameMatch && displayNameMatch[1] && !metadata.artist) {
-                    metadata.artist = displayNameMatch[1];
-                }
-                const titleMatch = scriptContent.match(/"title"\s*:\s*"([^"]+)"/);
-                if (titleMatch && titleMatch[1] && !metadata.title) {
-                    metadata.title = titleMatch[1].trim();
-                }
-                const imageMatch = scriptContent.match(/"imageUrl"\s*:\s*"([^"]+)"/);
-                if (imageMatch && imageMatch[1] && !metadata.mediaUrls.image) {
-                    metadata.mediaUrls.image = imageMatch[1];
-                }
-                const videoMatch = scriptContent.match(/"videoUrl"\s*:\s*"([^"]+)"/);
-                if (videoMatch && videoMatch[1] && !metadata.mediaUrls.video) {
-                    metadata.mediaUrls.video = videoMatch[1];
-                }
+        const raw = scripts[i].textContent;
+        if (!raw || (!raw.includes('audio_url') && !raw.includes('display_name'))) continue;
+
+        // Rare case: a genuine pure-JSON <script> (props.pageProps).
+        try {
+            const pp = JSON.parse(raw)?.props?.pageProps;
+            if (pp) {
+                const clip = pp.clip || pp.song || {};
+                metadata.mediaUrls.image = metadata.mediaUrls.image || pp.imageUrl || clip.image_url || '';
+                metadata.mediaUrls.video = metadata.mediaUrls.video || pp.videoUrl || clip.video_url || '';
+                metadata.mediaUrls.audio = metadata.mediaUrls.audio || pp.audioUrl || clip.audio_url;
+                const dur = clip.duration ?? pp.duration;
+                if (!metadata.duration && typeof dur === 'number') metadata.duration = formatSeconds(dur);
+                metadata.model = metadata.model || clip.major_model_version || clip.model_name;
             }
+        } catch {
+            // Streaming/escaped chunk — handled by the regex pass below.
+        }
+
+        // Unescape the JS-string escaping, then extract the real values.
+        const text = raw.replace(/\\"/g, '"').replace(/\\u002[fF]/gi, '/').replace(/\\\//g, '/');
+        const grab = (re: RegExp): string => {
+            const m = text.match(re);
+            return m && m[1] ? m[1] : '';
+        };
+        if (!metadata.mediaUrls.image) metadata.mediaUrls.image = grab(/"image(?:Url|_url)"\s*:\s*"([^"]+)"/);
+        if (!metadata.mediaUrls.video) metadata.mediaUrls.video = grab(/"video(?:Url|_url)"\s*:\s*"([^"]+)"/);
+        if (!metadata.mediaUrls.audio) {
+            const a = grab(/"audio(?:Url|_url)"\s*:\s*"([^"]+)"/);
+            if (a) metadata.mediaUrls.audio = a;
+        }
+        if (!metadata.duration) {
+            const d = grab(/"duration"\s*:\s*([0-9]+(?:\.[0-9]+)?)/);
+            if (d) metadata.duration = formatSeconds(parseFloat(d));
+        }
+        if (!metadata.model) {
+            const m = grab(/"(?:major_model_version|model_name)"\s*:\s*"([^"]+)"/);
+            if (m) metadata.model = m;
         }
     }
 
-    // Ensure both URLs exist by falling back to the conventional CDN paths.
+    // Last-resort CDN fallbacks (only if extraction above came up empty). These
+    // are best-effort guesses — the real URLs from the embedded JSON are preferred.
     const songId = window.location.pathname.split('/')[2];
-    if (!metadata.mediaUrls.image) {
-        metadata.mediaUrls.image = `${CDN_BASE}/${songId}/cover.jpg`;
+    if (!metadata.mediaUrls.image && songId) {
+        metadata.mediaUrls.image = `${CDN_BASE}/image_${songId}.jpeg`;
     }
-    if (!metadata.mediaUrls.video) {
-        metadata.mediaUrls.video = `${CDN_BASE}/${songId}/visualizer.mp4`;
+    if (!metadata.mediaUrls.video && songId) {
+        metadata.mediaUrls.video = `${CDN_BASE}/${songId}.mp4`;
+    }
+    if (!metadata.mediaUrls.audio && songId) {
+        metadata.mediaUrls.audio = `${CDN_BASE}/${songId}.mp3`;
     }
 
     return metadata;

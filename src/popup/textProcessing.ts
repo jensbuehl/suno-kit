@@ -126,6 +126,19 @@ export function convertLrc(lrcContent: string, opts: TextOptions): string {
     return result.trim();
 }
 
+/**
+ * Strips a leading `[mm:ss.xx]` timestamp from each line, for on-screen render
+ * and Copy when the Timestamps toggle is off. Does NOT touch the `.lrc` download
+ * path, which always stays timed (spec §3.4, D6). `convertLrc`'s contract is
+ * unchanged — this is a pure post-step.
+ */
+export function stripTimestamps(lrc: string): string {
+    return lrc
+        .split('\n')
+        .map((line) => line.replace(/^\s*\[\d{2}:\d{2}\.\d{2,3}\]\s*/, ''))
+        .join('\n');
+}
+
 /** Duplicates the last LRC line +2 seconds (workaround for the Vizzy player). */
 export function addVizzyWorkaround(lrcContent: string): string {
     if (!lrcContent || !lrcContent.trim()) return lrcContent;

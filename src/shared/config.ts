@@ -6,6 +6,3 @@ export const CDN_BASE = 'https://cdn1.suno.ai';
 
 /** Suno studio API base used for aligned-lyrics requests. */
 export const STUDIO_API_BASE = 'https://studio-api.prod.suno.com/api/gen';
-
-/** localStorage/chrome.storage key for the selected UI language. */
-export const LANG_STORAGE_KEY = 'suno-lyrics-lang';

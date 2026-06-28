@@ -25,7 +25,9 @@ const buildOptions = {
 function copyStatic() {
     cpSync('manifest.json', `${outdir}/manifest.json`);
     cpSync('src/popup/popup.html', `${outdir}/popup.html`);
+    cpSync('src/popup/theme.css', `${outdir}/theme.css`);
     cpSync('src/popup/popup.css', `${outdir}/popup.css`);
+    // public/ carries the locally bundled fonts (public/fonts/*.woff2) — no hot-linking.
     cpSync('public', `${outdir}/public`, { recursive: true });
 }
 
