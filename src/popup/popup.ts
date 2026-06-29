@@ -50,8 +50,8 @@ function topbarHtml(): string {
     return `
         <div class="topbar">
             <div class="wordmark">
-                <span class="tile">${icon('music-note', 14)}</span>
-                <span><span class="brand-sun">${t('brand_sun')}</span> <span class="brand-co">${t('brand_co')}</span></span>
+                <span class="tile"><span class="suno-mark" role="img" aria-label="${t('brand_sun')}"></span></span>
+                <span class="brand-co">${t('brand_co')}</span>
             </div>
         </div>
     `;

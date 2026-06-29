@@ -94,19 +94,21 @@ button:focus:not(:focus-visible) {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
     height: 22px;
+    padding: 0 8px;
     border-radius: 6px;
     background: linear-gradient(135deg, var(--accent), var(--accent-deep));
     color: var(--on-accent);
     box-shadow: 0 0 12px var(--accent-glow);
 }
-.wordmark .tile .icon {
-    width: 14px;
-    height: 14px;
-}
-.wordmark .brand-sun {
-    color: var(--text);
+/* SUNO wordmark, recolored to --on-accent via mask so it reads on the accent tile */
+.wordmark .tile .suno-mark {
+    display: block;
+    width: 43px;
+    height: 12px;
+    background: var(--on-accent);
+    -webkit-mask: url(public/suno-logo.png) center / contain no-repeat;
+    mask: url(public/suno-logo.png) center / contain no-repeat;
 }
 .wordmark .brand-co {
     color: var(--accent);
