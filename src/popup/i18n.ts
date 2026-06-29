@@ -3,8 +3,8 @@
 
 const messages = {
     // Wordmark
-    brand_sun: 'SUNO',
-    brand_co: 'Copilot',
+    brand_sun: 'Suno',
+    brand_co: 'Kit',
 
     // Footer / connection
     connected: 'Connected',

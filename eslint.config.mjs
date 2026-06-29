@@ -29,7 +29,7 @@ export default [
     },
     {
         // Build tooling runs under Node.
-        files: ['*.mjs'],
+        files: ['**/*.mjs'],
         languageOptions: {
             ecmaVersion: 2022,
             sourceType: 'module',

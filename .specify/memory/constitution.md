@@ -23,7 +23,7 @@ Templates requiring updates:
 Follow-up TODOs: None
 -->
 
-# SUNO Copilot Constitution
+# SunoKit Constitution
 
 ## Core Principles
 
@@ -37,7 +37,7 @@ a deep hierarchy. Any added complexity (new dependency, new abstraction, new
 configuration surface) MUST be justified against a simpler rejected alternative in
 the plan's Complexity Tracking table.
 
-**Rationale**: SUNO Copilot is a focused browser extension. Minimal surface area
+**Rationale**: SunoKit is a focused browser extension. Minimal surface area
 keeps the extension fast, auditable, easy to review for permissions/security, and
 cheap to change as the UX evolves.
 

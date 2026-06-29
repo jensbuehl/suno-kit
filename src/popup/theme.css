@@ -1,5 +1,5 @@
 /* ============================================================================
- * SUNO Copilot — Design Tokens (single source of truth)
+ * SunoKit — Design Tokens (single source of truth)
  * ----------------------------------------------------------------------------
  * Every component references these BARE tokens (var(--accent), var(--bg-app), …)
  * and never hard-codes a hex / px literal. Re-theming = override one block;

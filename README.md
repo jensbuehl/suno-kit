@@ -1,4 +1,4 @@
-# SUNO Copilot
+# SunoKit
 
 > ⚠️ **Heavily WIP (v0.0.9).** Structure and APIs are still changing.
 

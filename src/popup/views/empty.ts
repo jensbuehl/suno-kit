@@ -10,7 +10,7 @@ export interface EmptyProps {
 export function renderEmpty(root: HTMLElement, props: EmptyProps): void {
     root.innerHTML = `
         <div class="empty">
-            <div class="tile">${icon('music-note', 28)}</div>
+            <img class="empty-mark" src="public/icon128.png" alt="" />
             <h2>${t('empty_title')}</h2>
             <p>${t('empty_body')}</p>
             <button class="link-accent" id="openSunoBtn">${t('open_suno')} ${icon('external', 14)}</button>

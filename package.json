@@ -1,11 +1,12 @@
 {
-  "name": "suno-copilot",
+  "name": "sunokit",
   "version": "0.0.9",
   "description": "Chrome extension to download lyrics (LRC), audio, cover, and video from Suno songs. Heavily WIP.",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
+    "icons": "node scripts/make-icons.mjs",
     "watch": "node build.mjs --watch",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
@@ -23,6 +24,7 @@
     "eslint": "^9.13.0",
     "globals": "^15.11.0",
     "prettier": "^3.3.3",
+    "sharp": "^0.35.2",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.12.2",
     "vitest": "^2.1.4"

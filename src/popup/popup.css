@@ -1,4 +1,4 @@
-/* SUNO Copilot popup. Tokens only — no raw hex/px literals for themeable values
+/* SunoKit popup. Tokens only — no raw hex/px literals for themeable values
  * (palette lives in theme.css, loaded first). Structural px (sizes, spacing) are
  * fine here; all colors come from var(--…). */
 
@@ -90,25 +90,13 @@ button:focus:not(:focus-visible) {
     font-weight: 700;
     font-size: 15px;
 }
-.wordmark .tile {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 22px;
-    padding: 0 8px;
-    border-radius: 6px;
-    background: linear-gradient(135deg, var(--accent), var(--accent-deep));
-    color: var(--on-accent);
-    box-shadow: 0 0 12px var(--accent-glow);
-}
-/* SUNO wordmark, recolored to --on-accent via mask so it reads on the accent tile */
-.wordmark .tile .suno-mark {
+/* App mark (same artwork as the toolbar icon); corners are baked into the PNG. */
+.wordmark .brand-mark {
     display: block;
-    width: 43px;
-    height: 12px;
-    background: var(--on-accent);
-    -webkit-mask: url(public/suno-logo.png) center / contain no-repeat;
-    mask: url(public/suno-logo.png) center / contain no-repeat;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    box-shadow: 0 0 12px var(--accent-glow);
 }
 .wordmark .brand-co {
     color: var(--accent);
@@ -640,19 +628,10 @@ button:focus:not(:focus-visible) {
     padding: 40px 28px 34px;
     gap: 14px;
 }
-.empty .tile {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 60px;
-    height: 60px;
-    border-radius: 16px;
-    background: var(--bg-raised);
-    color: var(--text-mut);
-}
-.empty .tile .icon {
-    width: 28px;
-    height: 28px;
+.empty .empty-mark {
+    display: block;
+    width: 64px;
+    height: 64px;
 }
 .empty h2 {
     font-size: 15px;
