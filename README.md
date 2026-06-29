@@ -8,6 +8,9 @@ not just an open Suno page.
 
 > Private/self-hosted extension. Not published on the Chrome Web Store.
 
+<img width="493" height="595" alt="Screenshot 2026-06-29 174931" src="https://github.com/user-attachments/assets/3747bb1b-8939-4ece-a85c-4d140f0954d7" />
+
+
 ## Features
 
 - **Works from any tab.** Loads the song three ways, in priority order:
