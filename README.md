@@ -141,4 +141,23 @@ publishes a GitHub Release with `sunokit-<tag>.zip` (the `dist/` contents) attac
 
 ## License
 
-Private project. All rights reserved.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Privacy
+
+SunoKit does not collect, transmit, or store personal data outside your browser.
+
+- All processing happens locally.
+- Authentication tokens remain within your browser and are only used to communicate directly with Suno.
+- No analytics, telemetry, or tracking are included.
+- No data is sent to third-party servers.
+
+## Disclaimer
+
+> **SunoKit is an independent, unofficial project and is not affiliated with, endorsed by, or sponsored by Suno, Inc.**
+>
+> "Suno" is a trademark of its respective owner.
+>
+> This extension is intended for personal use with your own Suno account. It uses your existing authenticated browser session and does not bypass authentication or access controls.
+>
+> Please ensure that your use of this software complies with Suno's Terms of Service and all applicable laws. You are solely responsible for how you use this project.
