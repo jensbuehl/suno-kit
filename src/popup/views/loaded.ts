@@ -21,13 +21,24 @@ function tabAvailable(song: SongModel, tab: Tab): boolean {
     return !!song.video && song.videoAvailable !== false;
 }
 
+/** Human label for where the loaded song was sourced from. */
+function originLabel(source: SongModel['source']): string {
+    if (source === 'paste') return t('src_paste');
+    if (source === 'background-tab') return t('src_background');
+    return t('src_active');
+}
+
 function sourceCardHtml(song: SongModel): string {
     const coverStyle = song.image ? ` style="background-image:url('${song.image}');background-size:cover"` : '';
-    const meta: string[] = [];
-    if (song.duration) meta.push(`<span>${song.duration}</span>`);
-    if (song.model) meta.push(`<span>${song.model}</span>`);
-    const metaRow =
-        meta.length > 0 ? `<div class="source-extra">${meta.join('<span class="dot"></span>')}</div>` : '';
+    // The origin chip doubles as the override affordance — clicking it opens the
+    // paste row (prefilled with the current URL) so any auto-detected source can
+    // be replaced by a pasted link.
+    const origin = `<button class="source-origin" id="overrideBtn" type="button" title="${t('change_source')}" aria-label="${t('change_source')}">
+        ${icon('link', 12)} ${originLabel(song.source)}
+    </button>`;
+    const extras = [origin];
+    if (song.duration) extras.push(`<span>${song.duration}</span>`);
+    if (song.model) extras.push(`<span>${song.model}</span>`);
 
     return `
         <div class="source-card">
@@ -35,7 +46,7 @@ function sourceCardHtml(song: SongModel): string {
             <div class="source-meta">
                 <div class="source-title">${song.title}</div>
                 <div class="source-artist">by ${song.artist}</div>
-                ${metaRow}
+                <div class="source-extra">${extras.join('<span class="dot"></span>')}</div>
             </div>
             <button class="btn btn-ghost zip-btn" id="zipToggle" aria-pressed="false">
                 ${icon('download', 14)} ${t('zip_label')}
@@ -99,7 +110,9 @@ function tabsHtml(state: PopupState, song: SongModel): string {
     return `<div class="tabs">${buttons}</div>`;
 }
 
-function lyricsLinesHtml(song: SongModel, state: PopupState): string {
+/** The lyrics box inner HTML — exported so the trim panel can live-refresh just
+ *  this region on keystroke without a full re-render (keeps input focus). */
+export function lyricsLinesHtml(song: SongModel, state: PopupState): string {
     const text = renderedLyrics(song.lrcContent, state);
     return text
         .split('\n')
@@ -109,6 +122,34 @@ function lyricsLinesHtml(song: SongModel, state: PopupState): string {
             return `<div class="lyric-line"><span class="txt">${line}</span></div>`;
         })
         .join('');
+}
+
+function escapeAttr(v: string): string {
+    return v.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+/** Collapsible trim-rule panel (drop boilerplate lines around the lyrics). */
+function trimPanelHtml(state: PopupState): string {
+    const { trim } = state;
+    return `
+        <div class="trim-panel">
+            <label class="trim-field">
+                <span>${t('trim_start')}</span>
+                <input class="text-input" id="trimStart" type="text"
+                    value="${escapeAttr(trim.startAfter)}" placeholder="${t('trim_placeholder')}" />
+            </label>
+            <label class="trim-field">
+                <span>${t('trim_end')}</span>
+                <input class="text-input" id="trimEnd" type="text"
+                    value="${escapeAttr(trim.endBefore)}" placeholder="${t('trim_placeholder')}" />
+            </label>
+            <div class="trim-toggles">
+                <button class="chip" id="trimCase" type="button" aria-pressed="${trim.caseSensitive}">
+                    ${t('trim_case')}
+                </button>
+            </div>
+        </div>
+    `;
 }
 
 function lyricsTabHtml(state: PopupState, song: SongModel): string {
@@ -121,6 +162,16 @@ function lyricsTabHtml(state: PopupState, song: SongModel): string {
             <button class="chip" id="cleanChip" aria-pressed="${state.removePunct}">
                 ${icon('check', 14)} ${t('clean')}
             </button>
+            <div class="split-chip">
+                <button class="chip split-toggle" id="trimChip" aria-pressed="${state.trim.enabled}"
+                    title="${t('trim_toggle_hint')}">
+                    ${icon('list', 14)} ${t('trim_label')}
+                </button>
+                <button class="chip split-caret${state.trimOpen ? ' open' : ''}" id="trimEdit"
+                    aria-expanded="${state.trimOpen}" aria-label="${t('trim_edit_hint')}" title="${t('trim_edit_hint')}">
+                    ${icon('chevron-down', 14)}
+                </button>
+            </div>
             <span class="toolbar-spacer"></span>
             <div class="case-segment">
                 <button class="seg${segActive('none')}" data-case="none">Aa</button>
@@ -128,6 +179,7 @@ function lyricsTabHtml(state: PopupState, song: SongModel): string {
                 <button class="seg${segActive('lower')}" data-case="lower">a</button>
             </div>
         </div>
+        ${state.trimOpen ? trimPanelHtml(state) : ''}
         <div class="lyrics-box">${lyricsLinesHtml(song, state)}</div>
         <div class="lyrics-actions">
             <button class="btn btn-primary copy" id="copyBtn">${icon('copy', 15)} ${t('copy_lyrics')}</button>
@@ -206,6 +258,7 @@ export function renderLoaded(root: HTMLElement, props: LoadedProps): void {
     `;
 
     // Source card / ZIP
+    root.querySelector('#overrideBtn')?.addEventListener('click', () => actions.togglePaste());
     const zipToggle = root.querySelector<HTMLButtonElement>('#zipToggle')!;
     zipToggle.setAttribute('aria-pressed', String(state.zipOpen));
     zipToggle.addEventListener('click', () => actions.toggleZipOpen());
@@ -228,9 +281,20 @@ export function renderLoaded(root: HTMLElement, props: LoadedProps): void {
     if (state.tab === 'lyrics') {
         root.querySelector('#tsChip')!.addEventListener('click', () => actions.toggleTimestamps());
         root.querySelector('#cleanChip')!.addEventListener('click', () => actions.toggleClean());
+        root.querySelector('#trimChip')!.addEventListener('click', () => actions.toggleTrimEnabled());
+        root.querySelector('#trimEdit')!.addEventListener('click', () => actions.toggleTrim());
         root.querySelectorAll<HTMLButtonElement>('.case-segment .seg').forEach((seg) => {
             seg.addEventListener('click', () => actions.setCaseMode(seg.dataset.case as 'none' | 'upper' | 'lower'));
         });
+        if (state.trimOpen) {
+            root.querySelector<HTMLInputElement>('#trimStart')?.addEventListener('input', (e) =>
+                actions.setTrimText('startAfter', (e.target as HTMLInputElement).value)
+            );
+            root.querySelector<HTMLInputElement>('#trimEnd')?.addEventListener('input', (e) =>
+                actions.setTrimText('endBefore', (e.target as HTMLInputElement).value)
+            );
+            root.querySelector('#trimCase')?.addEventListener('click', () => actions.toggleTrimCase());
+        }
         root.querySelector('#copyBtn')!.addEventListener('click', () => actions.copyLyrics());
         root.querySelector('#lrcBtn')!.addEventListener('click', () => actions.downloadLrc());
     } else if (state.tab === 'audio') {

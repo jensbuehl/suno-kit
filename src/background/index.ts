@@ -2,7 +2,8 @@ import { logger } from '../shared/logger';
 import type { GetCookiesRequest, GetCookiesResponse } from '../shared/types';
 
 // Supplies the relevant Suno auth cookies (__client, __session, Clerk) to the
-// content script, which cannot read HttpOnly cookies itself.
+// popup. chrome.cookies (incl. HttpOnly) is only reachable from an extension
+// context, so the popup asks the service worker to read them.
 chrome.runtime.onMessage.addListener(
     (message: GetCookiesRequest, _sender, sendResponse: (response: GetCookiesResponse) => void) => {
         if (!message || message.action !== 'FC_GET_SUNO_COOKIES') return;

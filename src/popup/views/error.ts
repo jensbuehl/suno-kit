@@ -1,18 +1,38 @@
-import { t } from '../i18n';
+import { type MessageKey, t } from '../i18n';
 import { icon } from '../icons';
 import type { PopupActions } from '../song';
-import type { TokenOption } from '../../shared/types';
+import type { LoadError, TokenOption } from '../../shared/types';
 
 export interface ErrorProps {
     actions: PopupActions;
     advancedOpen: boolean;
     tokenOptions: TokenOption[];
     selectedId: string;
+    error: LoadError | null;
 }
 
-/** Token error state with Reconnect + progressive manual-token fallback (spec §6). */
+/** Distinct, specific copy per failure mode (FR-011). */
+function errorCopy(error: LoadError | null): { titleKey: MessageKey; bodyKey: MessageKey } {
+    switch (error?.kind) {
+        case 'bad-link':
+            return { titleKey: 'error_title_load', bodyKey: 'err_bad_link' };
+        case 'not-signed-in':
+            return { titleKey: 'error_title', bodyKey: 'err_not_signed_in' };
+        case 'session-expired':
+            return { titleKey: 'error_title', bodyKey: 'err_session_expired' };
+        case 'song-inaccessible':
+            return { titleKey: 'error_title_load', bodyKey: 'err_song_inaccessible' };
+        case 'offline':
+            return { titleKey: 'error_title_load', bodyKey: 'err_offline' };
+        default:
+            return { titleKey: 'error_title_load', bodyKey: 'err_unknown' };
+    }
+}
+
+/** Token/load error state with Reconnect + progressive manual-token fallback (spec §6). */
 export function renderError(root: HTMLElement, props: ErrorProps): void {
-    const { actions, advancedOpen, tokenOptions, selectedId } = props;
+    const { actions, advancedOpen, tokenOptions, selectedId, error } = props;
+    const copy = errorCopy(error);
 
     const optionsHtml = [
         `<option value="auto"${selectedId === 'auto' ? ' selected' : ''}>${t('token_auto')}</option>`,
@@ -25,8 +45,8 @@ export function renderError(root: HTMLElement, props: ErrorProps): void {
     root.innerHTML = `
         <div class="error">
             <div class="circle">${icon('warning', 26)}</div>
-            <h2>${t('error_title')}</h2>
-            <p>${t('error_body')}</p>
+            <h2>${t(copy.titleKey)}</h2>
+            <p>${t(copy.bodyKey)}</p>
             <button class="btn btn-primary" id="reconnectBtn">${icon('refresh', 15)} ${t('reconnect')}</button>
             <button class="advanced-toggle" id="advancedToggle" aria-expanded="${advancedOpen}">
                 ${t('try_other')} ${icon('chevron-down', 14)}

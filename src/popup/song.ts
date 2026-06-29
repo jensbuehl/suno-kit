@@ -2,6 +2,7 @@
 // the action callbacks the views invoke. Keeps views free of chrome.* (the
 // router in popup.ts owns all messaging — see contracts/popup-modules.md).
 
+import type { SongRef, SongSource } from '../shared/types';
 import type { CaseMode, PopupState, Tab, ZipSelection } from './state';
 
 export interface SongModel {
@@ -15,6 +16,7 @@ export interface SongModel {
     duration?: string;
     model?: string;
     videoAvailable?: boolean;
+    source?: SongSource; // where this song was resolved from (origin chip / override)
 }
 
 /** Token-fallback data, only needed by the error view. */
@@ -27,6 +29,9 @@ export interface TokenInfo {
 export interface PopupActions {
     // Top bar
     openSuno(): void;
+    togglePaste(): void;
+    loadFromInput(input: string): void;
+    loadRef(ref: SongRef): void;
     // Tabs / lyrics toolbar
     setTab(t: Tab): void;
     toggleTimestamps(): void;
@@ -34,6 +39,11 @@ export interface PopupActions {
     setCaseMode(m: CaseMode): void;
     copyLyrics(): void;
     downloadLrc(): void;
+    // Lyrics trim config
+    toggleTrim(): void; // open/close the editor panel
+    toggleTrimEnabled(): void; // activate/deactivate trimming (keeps markers)
+    setTrimText(field: 'startAfter' | 'endBefore', value: string): void;
+    toggleTrimCase(): void;
     // Assets
     downloadAsset(kind: 'audio' | 'cover' | 'video'): void;
     // ZIP

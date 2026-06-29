@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeCandidate, isLikelyJwt, makeCandidateId } from '../src/content/tokenDiscovery';
+import { describeCandidate, isLikelyJwt, makeCandidateId } from '../src/shared/tokenDiscovery';
 
 describe('isLikelyJwt', () => {
     it('accepts a three-part base64url token', () => {

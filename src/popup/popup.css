@@ -26,9 +26,25 @@ body {
 #app {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    /* Fixed height (min == max) so the popup NEVER varies — every tab, the
+     * loading screen, and the empty/error states are all exactly this tall, and
+     * opening a config panel can't resize it. The lyrics box / asset panel fills
+     * and scrolls inside; a config panel just shrinks that one region (single
+     * scroll, action buttons always visible). NOT 100vh — vh tracks the popup's
+     * own height and deadlocks. 580 ≈ the lyrics tab's natural height and is under
+     * Chrome's 600px popup cap. */
+    min-height: 580px;
+    max-height: 580px;
     /* Thin border around the default (rectangular) Chrome popup window. */
     border: 1px solid var(--border-strong);
+}
+/* The view region flexes between the fixed top bar and footer so its content
+ * (the lyrics box / asset panel) can shrink instead of overflowing the popup. */
+#app > #view {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Gentle empty→loaded/state transition (T043). */
@@ -75,6 +91,7 @@ button:focus:not(:focus-visible) {
 /* Top bar (persistent)                                                      */
 /* ======================================================================== */
 .topbar {
+    flex: none;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -134,6 +151,22 @@ button:focus:not(:focus-visible) {
 .icon-btn .icon {
     width: 16px;
     height: 16px;
+}
+
+/* Paste-a-link row (revealed by the top-bar link toggle). */
+.paste-row {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px 4px;
+}
+.paste-row .text-input {
+    flex: 1;
+    min-width: 0;
+}
+.paste-row .btn {
+    flex: none;
 }
 
 .text-input {
@@ -209,6 +242,7 @@ button:focus:not(:focus-visible) {
 /* Source card (loaded)                                                      */
 /* ======================================================================== */
 .source-card {
+    flex: none;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -250,6 +284,26 @@ button:focus:not(:focus-visible) {
     font-family: var(--font-mono);
     font-size: 10.5px;
     color: var(--text-mut);
+}
+/* Source-origin chip — doubles as the override trigger. */
+.source-origin {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font: inherit;
+    color: var(--text-3);
+    transition: color 0.15s;
+}
+.source-origin:hover {
+    color: var(--accent);
+}
+.source-origin .icon {
+    width: 12px;
+    height: 12px;
 }
 .source-extra .dot {
     width: 3px;
@@ -343,10 +397,18 @@ button:focus:not(:focus-visible) {
 /* Tabs                                                                      */
 /* ======================================================================== */
 .tabs {
+    flex: none;
     display: flex;
     gap: 4px;
     padding: 0 16px 12px;
     border-bottom: 1px solid var(--border);
+}
+/* Tab content flexes to fill the view; its inner box/panel absorbs height. */
+.tab-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 .tab {
     flex: 1;
@@ -384,6 +446,7 @@ button:focus:not(:focus-visible) {
 /* Lyrics tab                                                                */
 /* ======================================================================== */
 .lyrics-toolbar {
+    flex: none;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -413,6 +476,27 @@ button:focus:not(:focus-visible) {
     border-color: var(--accent);
     color: var(--accent-weak-text);
 }
+/* Split control: [Trim] toggle (activate) joined with [⌄] caret (edit) — two
+ * decoupled interactions, one visual unit. */
+.split-chip {
+    display: inline-flex;
+}
+.split-chip .split-toggle {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+.split-chip .split-caret {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left: none;
+    padding: 6px 7px;
+}
+.split-caret .icon {
+    transition: transform 0.15s;
+}
+.split-caret.open .icon {
+    transform: rotate(180deg);
+}
 .toolbar-spacer {
     flex: 1;
 }
@@ -438,8 +522,43 @@ button:focus:not(:focus-visible) {
     color: var(--on-accent);
 }
 
+/* Lyrics trim-rule panel (collapsible). */
+.trim-panel {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0 16px 10px;
+    padding: 12px;
+    background: var(--bg-sunken);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+.trim-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--text-mut);
+}
+.trim-field .text-input {
+    width: 100%;
+}
+.trim-toggles {
+    display: flex;
+    gap: 6px;
+}
+.trim-toggles .chip {
+    font-family: var(--font-mono);
+    font-size: 11px;
+}
+
 .lyrics-box {
-    height: 226px;
+    /* Fills the fixed-height popup and scrolls long songs internally; shrinks when
+     * a config panel opens. Because the popup height is fixed, growing/scrolling
+     * here never changes the popup height (no tab jump, single scrollbar). */
+    flex: 1 1 auto;
+    min-height: 0;
     margin: 0 16px;
     padding: 12px 14px;
     background: var(--bg-sunken);
@@ -466,6 +585,7 @@ button:focus:not(:focus-visible) {
 }
 
 .lyrics-actions {
+    flex: none;
     display: flex;
     gap: 8px;
     padding: 12px 16px 16px;
@@ -481,10 +601,17 @@ button:focus:not(:focus-visible) {
 /* Asset panels (audio / cover / video)                                      */
 /* ======================================================================== */
 .asset-panel {
+    /* Fills the tab area; the action button is pinned to the bottom so it sits in
+     * the same place regardless of preview size (image aspect, etc.). */
+    flex: 1 1 auto;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     gap: 12px;
     padding: 16px;
+}
+.asset-panel > .btn-block {
+    margin-top: auto;
 }
 .asset-caption {
     text-align: center;
@@ -597,6 +724,7 @@ button:focus:not(:focus-visible) {
 /* Footer (persistent)                                                       */
 /* ======================================================================== */
 .footer {
+    flex: none;
     margin-top: auto;
     display: flex;
     align-items: center;
@@ -644,6 +772,43 @@ button:focus:not(:focus-visible) {
     max-width: 280px;
     line-height: 1.5;
 }
+.empty .empty-paste {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+.empty .empty-paste .text-input {
+    flex: 1;
+    min-width: 0;
+}
+.empty .empty-paste .btn {
+    flex: none;
+}
+.empty .inline-error {
+    align-self: stretch;
+    text-align: left;
+    padding: 0;
+}
+.tab-chooser {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+}
+.tab-chooser .chooser-label {
+    font-size: 11px;
+    color: var(--text-mut);
+    text-align: left;
+}
+.chooser-item {
+    justify-content: flex-start;
+    gap: 8px;
+}
+.chooser-item .chooser-id {
+    font-family: var(--font-mono);
+    font-size: 11px;
+}
 .link-accent {
     background: none;
     border: none;
@@ -660,6 +825,10 @@ button:focus:not(:focus-visible) {
 /* Loading state (skeleton)                                                  */
 /* ======================================================================== */
 .loading {
+    /* Fill the view so the skeleton matches the loaded lyrics-tab height and the
+     * spinner sits at the bottom. */
+    flex: 1 1 auto;
+    min-height: 0;
     padding: 16px;
     display: flex;
     flex-direction: column;
@@ -705,7 +874,9 @@ button:focus:not(:focus-visible) {
     height: 34px;
 }
 .skeleton-lyrics {
-    height: 226px;
+    /* Grows to fill, pushing the spinner row to the bottom of the view. */
+    flex: 1 1 auto;
+    min-height: 0;
 }
 .spinner-row {
     display: flex;

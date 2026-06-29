@@ -3,13 +3,16 @@
 // PopupActions object implemented here. Re-render is a full-view replace (the
 // popup is small) — see contracts/popup-modules.md.
 
-import { CDN_BASE } from '../shared/config';
 import { logger } from '../shared/logger';
-import type { GetLrcDataRequest, LrcDataResponse, TokenOption } from '../shared/types';
+import { type Settings, loadSettings, saveSettings } from '../shared/settings';
+import { parseSongId } from '../shared/songUrl';
+import type { LoadError, SongRef, TokenOption } from '../shared/types';
 import { t } from './i18n';
 import { icon } from './icons';
+import { type LoadOutcome, loadSong } from './loadSong';
 import { lrcFileText, renderedLyrics } from './lyrics';
 import type { PopupActions, SongModel } from './song';
+import { querySunoSongTabs, resolveInitialRef } from './songSource';
 import {
     type CaseMode,
     type PopupState,
@@ -18,10 +21,12 @@ import {
     initialState,
     setCaseMode,
     setTab,
+    setTrim,
     setView,
     toggleAdvanced,
     toggleClean,
     toggleTimestamps,
+    toggleTrimOpen,
     toggleZipItem,
     toggleZipOpen
 } from './state';
@@ -29,7 +34,7 @@ import { cleanFilename } from './textProcessing';
 import { type ZipItem, buildManifest, makeZipBlob } from './zip';
 import { renderEmpty } from './views/empty';
 import { renderError } from './views/error';
-import { renderLoaded } from './views/loaded';
+import { lyricsLinesHtml, renderLoaded } from './views/loaded';
 import { renderLoading } from './views/loading';
 
 // --- Module state -----------------------------------------------------------
@@ -37,7 +42,10 @@ let state: PopupState = initialState();
 let song: SongModel | null = null;
 let tokenOptions: TokenOption[] = [];
 let tokenSelectedId = 'auto';
-let activeTabId: number | undefined;
+let loadError: LoadError | null = null;
+let currentRef: SongRef | null = null;
+let pasteOpen = false;
+let bgSongTabs: SongRef[] = [];
 let zipBuilding = false;
 
 function byId<T extends HTMLElement = HTMLElement>(id: string): T {
@@ -53,7 +61,32 @@ function topbarHtml(): string {
                 <img class="brand-mark" src="public/icon128.png" alt="" />
                 <span class="brand-name">${t('brand_sun')}<span class="brand-co">${t('brand_co')}</span></span>
             </div>
+            <div class="topbar-actions">
+                <button class="icon-btn" id="pasteToggle" type="button"
+                    aria-pressed="${pasteOpen}" aria-label="${t('paste_toggle')}" title="${t('paste_toggle')}">
+                    ${icon('link', 16)}
+                </button>
+            </div>
         </div>
+        ${pasteOpen ? pasteRowHtml() : ''}
+    `;
+}
+
+/** Canonical Suno URL for the loaded song (prefilled into the override input). */
+function currentSongUrl(): string {
+    return song ? `https://suno.com/song/${song.songId}` : '';
+}
+
+/** Inline paste-a-link row revealed by the top-bar toggle (shared Load handler).
+ *  Prefilled with the current song's URL so it reads as "override/edit". */
+function pasteRowHtml(): string {
+    return `
+        <div class="paste-row">
+            <input class="text-input" id="pasteInput" type="url" inputmode="url" value="${currentSongUrl()}"
+                placeholder="${t('paste_placeholder')}" aria-label="${t('paste_title')}" />
+            <button class="btn btn-primary" id="pasteLoadBtn" type="button">${t('paste_load')}</button>
+        </div>
+        <div class="inline-error" id="pasteError" hidden></div>
     `;
 }
 
@@ -79,16 +112,24 @@ function render(): void {
         ${showFooter ? footerHtml(connected) : ''}
     `;
 
+    bindPasteControls();
+
     const view = byId('view');
     switch (state.view) {
         case 'loading':
             renderLoading(view);
             break;
         case 'empty':
-            renderEmpty(view, { actions });
+            renderEmpty(view, { actions, songTabs: bgSongTabs });
             break;
         case 'error':
-            renderError(view, { actions, advancedOpen: state.advancedOpen, tokenOptions, selectedId: tokenSelectedId });
+            renderError(view, {
+                actions,
+                advancedOpen: state.advancedOpen,
+                tokenOptions,
+                selectedId: tokenSelectedId,
+                error: loadError
+            });
             break;
         case 'loaded':
             if (song) renderLoaded(view, { state, song, actions });
@@ -101,6 +142,35 @@ function render(): void {
     }
 }
 
+/** Wires the top-bar paste toggle and the inline link Load control. */
+function bindPasteControls(): void {
+    const toggle = document.getElementById('pasteToggle');
+    if (toggle) toggle.addEventListener('click', () => actions.togglePaste());
+
+    const input = document.getElementById('pasteInput') as HTMLInputElement | null;
+    const loadBtn = document.getElementById('pasteLoadBtn');
+    if (input) {
+        input.focus();
+        // Prefilled with the current URL → select it so typing/pasting replaces
+        // it in one step (override), while still allowing an edit.
+        if (input.value) input.select();
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') actions.loadFromInput(input.value);
+        });
+        // Drag-and-drop a link onto the input.
+        input.addEventListener('dragover', (e) => e.preventDefault());
+        input.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const text = e.dataTransfer?.getData('text') || '';
+            if (text) {
+                input.value = text;
+                actions.loadFromInput(text);
+            }
+        });
+    }
+    if (loadBtn) loadBtn.addEventListener('click', () => actions.loadFromInput(input?.value || ''));
+}
+
 /** Shows an inline error in the element with `id` (if present in the current DOM). */
 function showInlineError(id: string, message: string): void {
     const el = document.getElementById(id);
@@ -109,41 +179,53 @@ function showInlineError(id: string, message: string): void {
     el.hidden = false;
 }
 
-// --- Messaging --------------------------------------------------------------
+// --- Load flow --------------------------------------------------------------
 
-type LrcRequestCallback = (response?: LrcDataResponse, lastError?: chrome.runtime.LastError) => void;
-
-/** Sends GET_LRC_DATA, injecting the content script on demand if not present. */
-function sendLrcRequest(tabId: number, message: GetLrcDataRequest, callback: LrcRequestCallback): void {
-    chrome.tabs.sendMessage(tabId, message, (response?: LrcDataResponse) => {
-        const err = chrome.runtime.lastError;
-        const notInjected =
-            !!err && /Receiving end does not exist|Could not establish connection/i.test(err.message || '');
-        if (!notInjected) {
-            callback(response, err);
-            return;
-        }
-        chrome.scripting.executeScript({ target: { tabId }, files: ['contentScript.js'] }, () => {
-            if (chrome.runtime.lastError) {
-                callback(undefined, chrome.runtime.lastError);
-                return;
-            }
-            chrome.tabs.sendMessage(tabId, message, (retry?: LrcDataResponse) => {
-                callback(retry, chrome.runtime.lastError);
-            });
-        });
-    });
-}
-
-/** Issues a request against the active tab and routes the response into a view. */
-function requestLrc(message: GetLrcDataRequest): void {
+/** Loads a resolved song reference and routes the outcome into a view. */
+function runLoad(ref: SongRef, tokenOptionId = 'auto'): void {
+    currentRef = ref;
     state = setView(state, 'loading');
     render();
-    if (activeTabId === undefined) {
-        applyResponse(undefined, { message: 'No active tab' } as chrome.runtime.LastError);
+    void loadSong(ref, tokenOptionId).then(applyOutcome);
+}
+
+/** Parses pasted/dropped input into a song ref and loads it (US1 entry point). */
+function loadFromInput(input: string): void {
+    const songId = parseSongId(input);
+    if (!songId) {
+        // The input may live in the top bar or the empty state — set both.
+        showInlineError('pasteError', t('err_bad_link'));
+        showInlineError('emptyPasteError', t('err_bad_link'));
         return;
     }
-    sendLrcRequest(activeTabId, message, (response, lastError) => applyResponse(response, lastError));
+    runLoad({ songId, source: 'paste', sourceUrl: input.trim() });
+}
+
+function applyOutcome(outcome: LoadOutcome): void {
+    tokenOptions = outcome.tokenOptions;
+    tokenSelectedId = outcome.tokenSelectedId;
+
+    if (outcome.ok) {
+        song = outcome.song;
+        loadError = null;
+        pasteOpen = false;
+        state = setView(state, 'loaded');
+        render();
+
+        // Refine video availability in the background, then re-render if it changed.
+        if (song.video) {
+            void checkVideoAvailability(song.video).then((ok) => {
+                if (song) {
+                    song.videoAvailable = ok;
+                    if (state.view === 'loaded') render();
+                }
+            });
+        }
+    } else {
+        loadError = outcome.error;
+        state = setView(state, 'error');
+        render();
+    }
 }
 
 /**
@@ -187,58 +269,6 @@ function checkVideoAvailability(videoUrl: string): Promise<boolean> {
         document.body.appendChild(video);
         video.src = videoUrl;
     });
-}
-
-function applyResponse(response?: LrcDataResponse, lastError?: chrome.runtime.LastError): void {
-    if (!response || lastError) {
-        // Content script not reachable (e.g. non-Suno tab) ⇒ no song detected.
-        state = setView(state, 'empty');
-        render();
-        return;
-    }
-    if (response.error === 'Not on a song page') {
-        state = setView(state, 'empty');
-        render();
-        return;
-    }
-
-    tokenOptions = Array.isArray(response.tokenOptions) ? response.tokenOptions : [];
-    tokenSelectedId = response.tokenSelectedId || 'auto';
-
-    if (response.lrcContent) {
-        const songId = response.songId || '';
-        // Audio fallback computed here too (not only in the content script) so a
-        // stale/old content script in an un-refreshed tab can't leave audio
-        // "undetected" — the popup always loads fresh and knows the song id.
-        const audio = response.mediaUrls?.audio || (songId ? `${CDN_BASE}/${songId}.mp3` : undefined);
-        song = {
-            songId,
-            title: response.title || 'Unknown Title',
-            artist: response.artist || 'Unknown Artist',
-            lrcContent: response.lrcContent,
-            image: response.mediaUrls?.image || undefined,
-            video: response.mediaUrls?.video || undefined,
-            audio,
-            duration: response.duration,
-            model: response.model
-        };
-        state = setView(state, 'loaded');
-        render();
-
-        // Refine video availability in the background, then re-render if it changed.
-        if (song.video) {
-            void checkVideoAvailability(song.video).then((ok) => {
-                if (song) {
-                    song.videoAvailable = ok;
-                    if (state.view === 'loaded') render();
-                }
-            });
-        }
-    } else {
-        // lrcContent == null ⇒ token failure; surface the error view (§6).
-        state = setView(state, 'error');
-        render();
-    }
 }
 
 // --- File helpers -----------------------------------------------------------
@@ -293,8 +323,34 @@ const actions: PopupActions = {
 
     downloadLrc() {
         if (!song) return;
-        const text = lrcFileText(song.lrcContent, state.removePunct, state.caseMode);
+        const text = lrcFileText(song.lrcContent, state.removePunct, state.caseMode, state.trim);
         triggerBlobDownload(new Blob([text], { type: 'text/plain' }), assetFilename('.lrc'));
+    },
+
+    toggleTrim() {
+        state = toggleTrimOpen(state);
+        render();
+    },
+
+    toggleTrimEnabled() {
+        state = setTrim(state, { enabled: !state.trim.enabled });
+        persistSettings();
+        render();
+    },
+
+    setTrimText(field, value) {
+        // Update + persist + live-refresh ONLY the lyrics box, so the input keeps
+        // focus/caret (a full re-render would blur it mid-typing).
+        state = setTrim(state, { [field]: value });
+        persistSettings();
+        const box = document.querySelector('.lyrics-box');
+        if (box && song) box.innerHTML = lyricsLinesHtml(song, state);
+    },
+
+    toggleTrimCase() {
+        state = setTrim(state, { caseSensitive: !state.trim.caseSensitive });
+        persistSettings();
+        render();
     },
 
     downloadAsset(kind: 'audio' | 'cover' | 'video') {
@@ -331,7 +387,7 @@ const actions: PopupActions = {
     },
 
     reconnect() {
-        requestLrc({ action: 'GET_LRC_DATA', tokenOptionId: 'auto' });
+        void reload('auto');
     },
 
     toggleAdvanced() {
@@ -340,9 +396,41 @@ const actions: PopupActions = {
     },
 
     retryWithSource(tokenOptionId: string) {
-        requestLrc({ action: 'GET_LRC_DATA', tokenOptionId });
+        void reload(tokenOptionId);
+    },
+
+    togglePaste() {
+        pasteOpen = !pasteOpen;
+        render();
+    },
+
+    loadFromInput(input: string) {
+        loadFromInput(input);
+    },
+
+    loadRef(ref: SongRef) {
+        runLoad(ref);
     }
 };
+
+// Persist settings on change, debounced so live typing doesn't hammer storage.
+let persistTimer: ReturnType<typeof setTimeout> | undefined;
+function persistSettings(): void {
+    clearTimeout(persistTimer);
+    const snapshot: Settings = { lyricsTrim: state.trim };
+    persistTimer = setTimeout(() => void saveSettings(snapshot), 250);
+}
+
+/** Re-runs the load for the current ref, or re-resolves one if none is set. */
+async function reload(tokenOptionId: string): Promise<void> {
+    const ref = currentRef ?? (await resolveInitialRef());
+    if (ref) {
+        runLoad(ref, tokenOptionId);
+    } else {
+        state = setView(state, 'empty');
+        render();
+    }
+}
 
 /** Briefly swaps a button's label to confirm an action, then restores it. */
 function flashButton(id: string, original: string): void {
@@ -364,7 +452,8 @@ async function buildAndDownloadZip(): Promise<void> {
         const manifest = buildManifest({
             selection: state.zip,
             title: song.title,
-            lrcContent: song.lrcContent,
+            // Same timed + trimmed .lrc as the download button produces.
+            lrcContent: lrcFileText(song.lrcContent, state.removePunct, state.caseMode, state.trim),
             mediaUrls: { image: song.image, video: song.video, audio: song.audio }
         });
 
@@ -399,23 +488,24 @@ async function buildAndDownloadZip(): Promise<void> {
 
 document.addEventListener('DOMContentLoaded', () => {
     render(); // initial loading skeleton
-
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        const tab = tabs[0];
-        activeTabId = tab?.id;
-        if (tab && tab.url && tab.url.includes('suno.com') && tab.id !== undefined) {
-            requestLrc({ action: 'GET_LRC_DATA' });
-        } else {
-            state = setView(state, 'empty');
-            render();
-        }
-    });
-
-    // Content script may report a video URL turned out unplayable.
-    chrome.runtime.onMessage.addListener((message: { action?: string; songId?: string }) => {
-        if (message?.action === 'VIDEO_INVALID' && song && message.songId === song.songId) {
-            song.videoAvailable = false;
-            if (state.view === 'loaded') render();
-        }
-    });
+    void bootstrap();
 });
+
+async function bootstrap(): Promise<void> {
+    // Apply persisted settings (lyrics trim) before the first content render.
+    const settings = await loadSettings();
+    state = setTrim(state, settings.lyricsTrim);
+
+    // Resolve a song without depending on the active tab being a Suno page:
+    // active Suno tab → a single background Suno song tab. When nothing is
+    // unambiguous, fall to the empty state — which offers a paste-a-link input
+    // and a chooser for any open Suno song tabs (never a dead end, FR-001).
+    const ref = await resolveInitialRef();
+    if (ref) {
+        runLoad(ref);
+        return;
+    }
+    bgSongTabs = await querySunoSongTabs();
+    state = setView(state, 'empty');
+    render();
+}

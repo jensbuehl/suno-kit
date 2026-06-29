@@ -1,6 +1,8 @@
 // Single in-memory UI-state model for the popup + pure transition helpers.
 // No DOM, no chrome.* — the view router re-renders when state changes (spec §7).
 
+import { DEFAULT_SETTINGS, type LyricsTrim } from '../shared/settings';
+
 export type View = 'loaded' | 'empty' | 'loading' | 'error';
 export type Tab = 'lyrics' | 'audio' | 'cover' | 'video';
 export type CaseMode = 'none' | 'upper' | 'lower';
@@ -21,6 +23,8 @@ export interface PopupState {
     zipOpen: boolean;
     zip: ZipSelection;
     advancedOpen: boolean;
+    trimOpen: boolean;
+    trim: LyricsTrim;
 }
 
 /** Fresh state for a newly opened popup (starts in loading; default lyrics tab). */
@@ -33,7 +37,9 @@ export function initialState(): PopupState {
         caseMode: 'none',
         zipOpen: false,
         zip: { lyrics: true, audio: true, cover: true, video: true },
-        advancedOpen: false
+        advancedOpen: false,
+        trimOpen: false,
+        trim: { ...DEFAULT_SETTINGS.lyricsTrim }
     };
 }
 
@@ -68,6 +74,14 @@ export function toggleZipItem(s: PopupState, k: keyof ZipSelection): PopupState 
 
 export function toggleAdvanced(s: PopupState): PopupState {
     return { ...s, advancedOpen: !s.advancedOpen };
+}
+
+export function toggleTrimOpen(s: PopupState): PopupState {
+    return { ...s, trimOpen: !s.trimOpen };
+}
+
+export function setTrim(s: PopupState, partial: Partial<LyricsTrim>): PopupState {
+    return { ...s, trim: { ...s.trim, ...partial } };
 }
 
 /** Number of currently selected ZIP items (button enable/label depends on it). */

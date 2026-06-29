@@ -30,28 +30,26 @@ export interface TokenOption {
     index: number;
 }
 
-// --- Popup -> content script -------------------------------------------------
+/** Where a resolved song reference originated (drives precedence + messaging). */
+export type SongSource = 'paste' | 'active-tab' | 'background-tab';
 
-export interface GetLrcDataRequest {
-    action: 'GET_LRC_DATA';
-    tokenOptionId?: string;
+/** A resolved pointer to one Suno song and where it came from. */
+export interface SongRef {
+    songId: string;
+    source: SongSource;
+    sourceUrl?: string;
 }
 
-export interface LrcDataResponse {
-    songId: string | null;
-    title?: string;
-    artist?: string;
-    mediaUrls?: MediaUrls | null;
-    duration?: string; // optional, best-effort passthrough
-    model?: string; // optional, best-effort passthrough
-    tokenDebugPath: string;
-    tokenOptions: TokenOption[];
-    tokenSelectedId: string;
-    lrcContent?: string | null;
-    error?: string;
-}
+/** Discriminated failure reasons surfaced by the popup-orchestrated load. */
+export type LoadError =
+    | { kind: 'bad-link' }
+    | { kind: 'not-signed-in' }
+    | { kind: 'session-expired'; canRefresh: boolean }
+    | { kind: 'song-inaccessible' }
+    | { kind: 'offline' }
+    | { kind: 'unknown'; detail?: string };
 
-// --- Content script -> background --------------------------------------------
+// --- Popup -> background ------------------------------------------------------
 
 export interface GetCookiesRequest {
     action: 'FC_GET_SUNO_COOKIES';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { alignedWordsToLrc } from '../src/content/lrc';
+import { alignedWordsToLrc } from '../src/shared/lrc';
 
 describe('alignedWordsToLrc', () => {
     it('formats start times as LRC timestamps', () => {

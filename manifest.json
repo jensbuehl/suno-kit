@@ -18,10 +18,6 @@
    "background": {
       "service_worker": "background.js"
    },
-   "content_scripts": [ {
-      "js": [ "contentScript.js" ],
-      "matches": [ "https://suno.com/*" ]
-   }],
    "description": "Download lyrics and MP3 files from Suno songs",
    "host_permissions": [
       "https://suno.com/*",

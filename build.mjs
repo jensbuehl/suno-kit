@@ -7,7 +7,6 @@ const outdir = 'dist';
 // Entry-point keys become the output filenames the manifest references.
 const entryPoints = {
     background: 'src/background/index.ts',
-    contentScript: 'src/content/index.ts',
     popup: 'src/popup/popup.ts'
 };
 

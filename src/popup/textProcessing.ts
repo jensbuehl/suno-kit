@@ -1,6 +1,57 @@
 // Pure lyric/text-processing helpers. No DOM or extension API access, so these
 // are unit-testable in isolation.
 
+import type { LyricsTrim } from '../shared/settings';
+
+const TS_PREFIX = /^\s*\[\d{2}:\d{2}\.\d{2,3}\]\s*/;
+
+/**
+ * Drops boilerplate lines around the real lyrics, per the user's trim rule:
+ * everything up to & including the `startAfter` marker line, and the `endBefore`
+ * marker line plus everything after it. Each Suno aligned-lyrics entry is one
+ * line, so matching is line-level. Matches against the text (timestamp stripped).
+ */
+export function trimLyrics(lrc: string, rule: LyricsTrim): string {
+    if (!rule.enabled) return lrc;
+    const startAfter = rule.startAfter.trim();
+    const endBefore = rule.endBefore.trim();
+    if (!startAfter && !endBefore) return lrc;
+
+    const lines = lrc.split('\n');
+    const textOf = (line: string): string => line.replace(TS_PREFIX, '');
+    const tester = (marker: string): ((line: string) => boolean) => {
+        if (rule.matchMode === 'regex') {
+            let re: RegExp;
+            try {
+                re = new RegExp(marker, rule.caseSensitive ? '' : 'i');
+            } catch {
+                return () => false; // invalid pattern → rule is inert, never throws
+            }
+            return (line) => re.test(textOf(line));
+        }
+        const needle = rule.caseSensitive ? marker : marker.toLowerCase();
+        return (line) =>
+            (rule.caseSensitive ? textOf(line) : textOf(line).toLowerCase()).includes(needle);
+    };
+
+    let start = 0;
+    let end = lines.length;
+    if (startAfter) {
+        const hit = lines.findIndex(tester(startAfter));
+        if (hit !== -1) start = hit + 1;
+    }
+    if (endBefore) {
+        const test = tester(endBefore);
+        for (let i = start; i < end; i++) {
+            if (test(lines[i])) {
+                end = i;
+                break;
+            }
+        }
+    }
+    return lines.slice(start, end).join('\n');
+}
+
 export interface TextOptions {
     removePunct: boolean;
     toUpper: boolean;
