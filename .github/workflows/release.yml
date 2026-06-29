@@ -1,0 +1,31 @@
+name: release
+
+# Builds the extension and publishes a GitHub Release whenever a version tag
+# (e.g. v1.0.0) is pushed. The release asset is sunokit-<tag>.zip — the contents
+# of dist/, ready to "Load unpacked" in Chrome.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build
+      - name: Package dist/
+        run: cd dist && zip -r "../sunokit-${{ github.ref_name }}.zip" .
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: SunoKit ${{ github.ref_name }}
+          files: sunokit-*.zip
+          generate_release_notes: true

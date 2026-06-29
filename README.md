@@ -26,6 +26,27 @@ not just an open Suno page.
 - **Tab-independent auth.** Uses your signed-in Suno session token, read from the browser's
   cookie jar; if it has gone stale it is refreshed from any open Suno tab.
 
+## Install
+
+No build tools needed — install the pre-built package:
+
+1. Go to the **[Releases](https://github.com/jensbuehl/suno-copilot/releases)** page and
+   download the latest **`sunokit-v*.zip`**.
+2. **Unzip** it into a folder you'll keep (e.g. `Documents/SunoKit`). Don't delete or move
+   this folder afterward — Chrome loads the extension from it.
+3. Open **`chrome://extensions`** in your browser.
+4. Turn on **Developer mode** (toggle, top-right).
+5. Click **Load unpacked** and select the unzipped folder.
+6. The **SunoKit** icon appears in the toolbar — click the puzzle-piece icon and pin it for
+   easy access.
+
+> Chrome only lets you install a `.zip` this way ("Load unpacked"); it blocks drag-and-drop
+> installs from outside the Web Store. This is expected for a private extension.
+
+**Updating to a new version:** download the newer release zip, unzip it (replacing the old
+folder's contents), then open `chrome://extensions` and click the **reload** ↻ icon on the
+SunoKit card.
+
 ## Usage
 
 1. **Sign in to Suno** in the same browser at least once.
@@ -94,7 +115,9 @@ Unit tests under `tests/` cover the pure logic: song-link parsing, song-page met
 extraction, error classification, lyrics trim, LRC conversion, text cleaning, and JWT
 detection.
 
-### Load the extension
+### Load the extension (from source)
+
+For end-user install, see [Install](#install) above. To run your own build:
 
 1. Run `npm run build` (or `npm run watch`) to produce `dist/`.
 2. Open `chrome://extensions`.
@@ -102,6 +125,19 @@ detection.
 4. Click **Load unpacked** and select the **`dist/`** folder.
 5. After changing code, rebuild (or keep `npm run watch` running) and click the **reload**
    icon on the extension card.
+
+### Releases
+
+Releases are automated. Bump the version in `manifest.json` / `package.json`, then push a
+matching tag:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The [`release` workflow](.github/workflows/release.yml) builds, runs `npm run check`, and
+publishes a GitHub Release with `sunokit-<tag>.zip` (the `dist/` contents) attached.
 
 ## License
 
