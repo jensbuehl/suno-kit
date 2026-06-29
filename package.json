@@ -1,7 +1,7 @@
 {
   "name": "sunokit",
-  "version": "0.0.9",
-  "description": "Chrome extension to download lyrics (LRC), audio, cover, and video from Suno songs. Heavily WIP.",
+  "version": "1.0.0",
+  "description": "Chrome extension to download lyrics (LRC), audio, cover, and video from Suno songs.",
   "private": true,
   "type": "module",
   "scripts": {
