@@ -212,13 +212,16 @@ function applyOutcome(outcome: LoadOutcome): void {
         state = setView(state, 'loaded');
         render();
 
-        // Refine video availability in the background, then re-render if it changed.
+        // Refine video availability in the background. Re-render ONLY when this
+        // actually changes the UI — an unavailable video disables the Video tab.
+        // When it's available (the common case) nothing visible changes, so we
+        // skip the re-render to avoid a flicker: a full DOM replace would reflash
+        // the cover image and remount the audio player with identical content.
         if (song.video) {
             void checkVideoAvailability(song.video).then((ok) => {
-                if (song) {
-                    song.videoAvailable = ok;
-                    if (state.view === 'loaded') render();
-                }
+                if (!song || song.videoAvailable === ok) return;
+                song.videoAvailable = ok;
+                if (state.view === 'loaded' && !ok) render();
             });
         }
     } else {
