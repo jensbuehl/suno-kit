@@ -19,6 +19,7 @@
       "service_worker": "background.js"
    },
    "description": "Download lyrics and MP3 files from Suno songs",
+   "incognito": "split",
    "host_permissions": [
       "https://suno.com/*",
       "https://auth.suno.com/*",
@@ -37,5 +38,5 @@
    "minimum_chrome_version": "114",
    "name": "SunoKit",
    "update_url": "https://clients2.google.com/service/update2/crx",
-   "version": "1.0.0"
+   "version": "1.0.1"
 }

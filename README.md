@@ -2,9 +2,14 @@
 
 > **v1.0.0** — first stable release.
 
-A Chrome (Manifest V3) extension that downloads **timed lyrics (`.lrc`)**, **audio**,
+A Chrome (Manifest V3) extension that downloads **time-synced lyrics (`.lrc`)**, **audio**,
 **cover art**, and **video** from [Suno](https://suno.com) songs — from **any** tab,
 not just an open Suno page.
+
+> ⚠️ **A Suno account is required — you must be logged in at [suno.com](https://suno.com).**
+> Time-synced lyrics come from Suno's **authenticated** API, so SunoKit uses your own
+> signed-in Suno session to fetch them. **There is no anonymous mode**: without a logged-in
+> session the lyrics can't be retrieved and the extension prompts you to sign in / reconnect.
 
 > Private/self-hosted extension. Not published on the Chrome Web Store.
 
@@ -17,7 +22,7 @@ not just an open Suno page.
   1. a **pasted/dropped** Suno song link,
   2. the **active** Suno song tab (auto-loads on open),
   3. a Suno song open in a **background** tab (picked from a list when several are open).
-- **Time-aligned lyrics → LRC**, with:
+- **Time-synced lyrics → LRC** (the core feature; **requires a logged-in Suno account**), with:
   - **Trim** — drop boilerplate lines around the lyrics (start after / end before a line
     containing a marker, e.g. a URL or a `©` line); activate/deactivate without losing your
     settings, which persist across sessions.
@@ -54,7 +59,8 @@ SunoKit card.
 
 ## Usage
 
-1. **Sign in to Suno** in the same browser at least once.
+1. **Sign in to Suno** in the same browser (**required** — keep a logged-in session at
+   suno.com; SunoKit needs it to fetch time-synced lyrics).
 2. Click the **SunoKit** toolbar icon.
 3. **Load a song:**
    - On a Suno song page → it loads automatically.
@@ -71,6 +77,17 @@ SunoKit card.
 If the token can't be read, has expired and can't be refreshed (no live Suno session), or
 Suno is unreachable, the popup fails fast and shows a clear error with **Open suno.com** and
 **Reconnect** actions — it never hangs on a loading screen.
+
+### Incognito
+
+SunoKit runs in **split incognito mode**, so an incognito window uses its **own** incognito
+Suno session (not your normal one). To use it there:
+
+1. `chrome://extensions` → SunoKit → **Details** → enable **Allow in Incognito**.
+2. Be **signed in to Suno inside that incognito window**.
+
+Each window stays isolated — normal windows use the normal login, incognito uses the
+incognito login.
 
 ## How it works
 
