@@ -1,7 +1,5 @@
 # SunoKit
 
-> **v1.0.0** — first stable release.
-
 A Chrome (Manifest V3) extension that downloads **time-synced lyrics (`.lrc`)**, **audio**,
 **cover art**, and **video** from [Suno](https://suno.com) songs — from **any** tab,
 not just an open Suno page.
@@ -40,7 +38,7 @@ not just an open Suno page.
 
 No build tools needed — install the pre-built package:
 
-1. Go to the **[Releases](https://github.com/jensbuehl/suno-copilot/releases)** page and
+1. Go to the **[Releases](https://github.com/jensbuehl/suno-kit/releases)** page and
    download the latest **`sunokit-v*.zip`**.
 2. **Unzip** it into a folder you'll keep (e.g. `Documents/SunoKit`). Don't delete or move
    this folder afterward — Chrome loads the extension from it.
