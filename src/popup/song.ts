@@ -19,12 +19,6 @@ export interface SongModel {
     source?: SongSource; // where this song was resolved from (origin chip / override)
 }
 
-/** Token-fallback data, only needed by the error view. */
-export interface TokenInfo {
-    options: { id: string; label: string; index: number }[];
-    selectedId: string;
-}
-
 /** All side-effecting callbacks the views can trigger. Implemented in popup.ts. */
 export interface PopupActions {
     // Top bar
@@ -52,8 +46,6 @@ export interface PopupActions {
     downloadZip(): void;
     // Error / token
     reconnect(): void;
-    toggleAdvanced(): void;
-    retryWithSource(tokenOptionId: string): void;
 }
 
 export interface LoadedProps {

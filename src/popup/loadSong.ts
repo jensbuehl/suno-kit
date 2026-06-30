@@ -9,8 +9,8 @@ import { alignedWordsToLrc } from '../shared/lrc';
 import { classifyLoadError } from '../shared/loadError';
 import { parseSongMetadata } from '../shared/songMetadata';
 import { fetchAlignedWordsWithToken, fetchSongPageHtml } from '../shared/sunoApi';
-import { getBearerTokenFromBrowser, makeCandidateId } from '../shared/tokenDiscovery';
-import type { LoadError, SongRef, TokenCandidate, TokenOption } from '../shared/types';
+import { getBearerTokenFromBrowser } from '../shared/tokenDiscovery';
+import type { LoadError, SongRef, TokenCandidate } from '../shared/types';
 import type { SongModel } from './song';
 import { anySunoTabOpen } from './sunoTabs';
 import { mintFreshToken } from './tokenRefresh';
@@ -18,29 +18,20 @@ import { mintFreshToken } from './tokenRefresh';
 export interface LoadSuccess {
     ok: true;
     song: SongModel;
-    tokenOptions: TokenOption[];
-    tokenSelectedId: string;
 }
 export interface LoadFailure {
     ok: false;
     error: LoadError;
-    tokenOptions: TokenOption[];
-    tokenSelectedId: string;
 }
 export type LoadOutcome = LoadSuccess | LoadFailure;
 
-/** Orders candidates to try, honouring an explicit manual selection. */
-function candidatesToTry(candidates: TokenCandidate[], selectedId: string): TokenCandidate[] {
-    let list = candidates.slice();
-    if (selectedId !== 'auto') {
-        const found = candidates.find((c) => makeCandidateId(c) === selectedId);
-        list = found ? [found] : candidates.slice();
-    }
+/** De-duplicates candidates by token (the session cookie is commonly seen on
+ *  multiple domains) so "Auto" doesn't try the same token twice. */
+function uniqueByToken(candidates: TokenCandidate[]): TokenCandidate[] {
     const seen = new Set<string>();
-    return list.filter((c) => {
-        const id = makeCandidateId(c);
-        if (seen.has(id)) return false;
-        seen.add(id);
+    return candidates.filter((c) => {
+        if (seen.has(c.token)) return false;
+        seen.add(c.token);
         return true;
     });
 }
@@ -65,14 +56,14 @@ async function assembleSong(ref: SongRef, lrcContent: string): Promise<SongModel
     };
 }
 
-/** Loads a song end-to-end for the given reference. */
-export async function loadSong(ref: SongRef, tokenOptionId = 'auto'): Promise<LoadOutcome> {
-    const selected = tokenOptionId || 'auto';
-    const { candidates, options } = await getBearerTokenFromBrowser();
+/** Loads a song end-to-end for the given reference. "Auto" tries every discovered
+ *  session token and, on a stale 401, mints a fresh one from a live Suno tab. */
+export async function loadSong(ref: SongRef): Promise<LoadOutcome> {
+    const candidates = await getBearerTokenFromBrowser();
 
     let lastStatus = 0;
     let threw = false;
-    for (const cand of candidatesToTry(candidates, selected)) {
+    for (const cand of uniqueByToken(candidates)) {
         const res = await fetchAlignedWordsWithToken(ref.songId, cand.token);
         if (res.threw) {
             // A network failure/timeout won't differ across tokens — stop retrying
@@ -82,20 +73,18 @@ export async function loadSong(ref: SongRef, tokenOptionId = 'auto'): Promise<Lo
         }
         lastStatus = res.status;
         if (res.data && res.data.length) {
-            const song = await assembleSong(ref, alignedWordsToLrc(res.data));
-            return { ok: true, song, tokenOptions: options, tokenSelectedId: selected };
+            return { ok: true, song: await assembleSong(ref, alignedWordsToLrc(res.data)) };
         }
     }
 
-    // Stale session: mint a fresh token from a live Suno tab and retry once (US3).
+    // Stale session: mint a fresh token from a live Suno tab and retry once.
     const refreshAvailable = await anySunoTabOpen();
     if (lastStatus === 401 && refreshAvailable) {
         const fresh = await mintFreshToken();
         if (fresh) {
             const res = await fetchAlignedWordsWithToken(ref.songId, fresh);
             if (res.data && res.data.length) {
-                const song = await assembleSong(ref, alignedWordsToLrc(res.data));
-                return { ok: true, song, tokenOptions: options, tokenSelectedId: selected };
+                return { ok: true, song: await assembleSong(ref, alignedWordsToLrc(res.data)) };
             }
             if (!res.threw) lastStatus = res.status;
         }
@@ -108,5 +97,5 @@ export async function loadSong(ref: SongRef, tokenOptionId = 'auto'): Promise<Lo
         threw,
         refreshAvailable
     });
-    return { ok: false, error, tokenOptions: options, tokenSelectedId: selected };
+    return { ok: false, error };
 }

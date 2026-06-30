@@ -6,7 +6,7 @@
 import { logger } from '../shared/logger';
 import { type Settings, loadSettings, saveSettings } from '../shared/settings';
 import { parseSongId } from '../shared/songUrl';
-import type { LoadError, SongRef, TokenOption } from '../shared/types';
+import type { LoadError, SongRef } from '../shared/types';
 import { t } from './i18n';
 import { icon } from './icons';
 import { type LoadOutcome, loadSong } from './loadSong';
@@ -23,7 +23,6 @@ import {
     setTab,
     setTrim,
     setView,
-    toggleAdvanced,
     toggleClean,
     toggleTimestamps,
     toggleTrimOpen,
@@ -40,8 +39,6 @@ import { renderLoading } from './views/loading';
 // --- Module state -----------------------------------------------------------
 let state: PopupState = initialState();
 let song: SongModel | null = null;
-let tokenOptions: TokenOption[] = [];
-let tokenSelectedId = 'auto';
 let loadError: LoadError | null = null;
 let currentRef: SongRef | null = null;
 let pasteOpen = false;
@@ -123,13 +120,7 @@ function render(): void {
             renderEmpty(view, { actions, songTabs: bgSongTabs });
             break;
         case 'error':
-            renderError(view, {
-                actions,
-                advancedOpen: state.advancedOpen,
-                tokenOptions,
-                selectedId: tokenSelectedId,
-                error: loadError
-            });
+            renderError(view, { actions, error: loadError });
             break;
         case 'loaded':
             if (song) renderLoaded(view, { state, song, actions });
@@ -187,26 +178,17 @@ const LOAD_TIMEOUT_MS = 25000;
 let loadSeq = 0;
 
 /** Loads a resolved song reference and routes the outcome into a view. */
-function runLoad(ref: SongRef, tokenOptionId = 'auto'): void {
+function runLoad(ref: SongRef): void {
     currentRef = ref;
     const seq = ++loadSeq;
     state = setView(state, 'loading');
     render();
 
     const backstop = new Promise<LoadOutcome>((resolve) =>
-        setTimeout(
-            () =>
-                resolve({
-                    ok: false,
-                    error: { kind: 'unknown', detail: 'timeout' },
-                    tokenOptions,
-                    tokenSelectedId: tokenOptionId
-                }),
-            LOAD_TIMEOUT_MS
-        )
+        setTimeout(() => resolve({ ok: false, error: { kind: 'unknown', detail: 'timeout' } }), LOAD_TIMEOUT_MS)
     );
 
-    void Promise.race([loadSong(ref, tokenOptionId), backstop]).then((outcome) => {
+    void Promise.race([loadSong(ref), backstop]).then((outcome) => {
         // Ignore a stale result if a newer load (e.g. Reconnect) already started.
         if (seq === loadSeq) applyOutcome(outcome);
     });
@@ -225,9 +207,6 @@ function loadFromInput(input: string): void {
 }
 
 function applyOutcome(outcome: LoadOutcome): void {
-    tokenOptions = outcome.tokenOptions;
-    tokenSelectedId = outcome.tokenSelectedId;
-
     if (outcome.ok) {
         song = outcome.song;
         loadError = null;
@@ -413,16 +392,7 @@ const actions: PopupActions = {
     },
 
     reconnect() {
-        void reload('auto');
-    },
-
-    toggleAdvanced() {
-        state = toggleAdvanced(state);
-        render();
-    },
-
-    retryWithSource(tokenOptionId: string) {
-        void reload(tokenOptionId);
+        void reload();
     },
 
     togglePaste() {
@@ -448,10 +418,10 @@ function persistSettings(): void {
 }
 
 /** Re-runs the load for the current ref, or re-resolves one if none is set. */
-async function reload(tokenOptionId: string): Promise<void> {
+async function reload(): Promise<void> {
     const ref = currentRef ?? (await resolveInitialRef());
     if (ref) {
-        runLoad(ref, tokenOptionId);
+        runLoad(ref);
     } else {
         state = setView(state, 'empty');
         render();

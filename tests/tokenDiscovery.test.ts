@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeCandidate, isLikelyJwt, makeCandidateId } from '../src/shared/tokenDiscovery';
+import { isLikelyJwt } from '../src/shared/tokenDiscovery';
 
 describe('isLikelyJwt', () => {
     it('accepts a three-part base64url token', () => {
@@ -20,33 +20,5 @@ describe('isLikelyJwt', () => {
         expect(isLikelyJwt('')).toBe(false);
         expect(isLikelyJwt(null)).toBe(false);
         expect(isLikelyJwt(123)).toBe(false);
-    });
-});
-
-describe('makeCandidateId', () => {
-    it('combines path and source', () => {
-        expect(makeCandidateId({ token: 't', source: 'cookie:__session', path: 'Weg 2' })).toBe(
-            'Weg 2|cookie:__session'
-        );
-    });
-});
-
-describe('describeCandidate', () => {
-    it('describes a browser session cookie by name', () => {
-        expect(describeCandidate({ token: 't', source: 'cookie-api:auth.suno.com/__client', path: 'Weg 1' })).toBe(
-            'Browser session cookie (__client)'
-        );
-    });
-
-    it('describes a page cookie by name', () => {
-        expect(describeCandidate({ token: 't', source: 'cookie:__session', path: 'Weg 2' })).toBe(
-            'Page cookie (__session)'
-        );
-    });
-
-    it('labels Clerk local storage clearly', () => {
-        expect(describeCandidate({ token: 't', source: 'localStorage:clerk.client.abc', path: 'Weg 3' })).toBe(
-            'Local storage (Clerk session)'
-        );
     });
 });

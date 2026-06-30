@@ -61,12 +61,7 @@ const messages = {
     // Error state
     error_title: "Couldn't read your session",
     error_title_load: "Couldn't load this song",
-    error_body: "We couldn't find your Suno token. Make sure you're signed in at suno.com.",
     reconnect: 'Reconnect',
-    try_other: 'Choose token source manually',
-    retry_with: 'Retry with this source',
-    manual_hint: 'Only change this if auto-detection picks the wrong token.',
-    token_auto: 'Automatic (recommended)',
 
     // ZIP package
     download_all: 'Download all as ZIP',

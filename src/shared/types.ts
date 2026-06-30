@@ -16,18 +16,11 @@ export interface SongMetadata {
     model?: string; // optional, best-effort from embedded JSON
 }
 
-/** A bearer-token candidate discovered in cookies / localStorage. */
+/** A bearer-token candidate found in the browser's Suno session cookies.
+ *  `source` is the cookie's "domain/name" (e.g. "auth.suno.com/__client"). */
 export interface TokenCandidate {
     token: string;
     source: string;
-    path: string;
-}
-
-/** A selectable token-discovery path shown in the popup dropdown. */
-export interface TokenOption {
-    id: string;
-    label: string;
-    index: number;
 }
 
 /** Where a resolved song reference originated (drives precedence + messaging). */

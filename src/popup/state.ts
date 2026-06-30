@@ -22,7 +22,6 @@ export interface PopupState {
     caseMode: CaseMode;
     zipOpen: boolean;
     zip: ZipSelection;
-    advancedOpen: boolean;
     trimOpen: boolean;
     trim: LyricsTrim;
 }
@@ -37,7 +36,6 @@ export function initialState(): PopupState {
         caseMode: 'none',
         zipOpen: false,
         zip: { lyrics: true, audio: true, cover: true, video: true },
-        advancedOpen: false,
         trimOpen: false,
         trim: { ...DEFAULT_SETTINGS.lyricsTrim }
     };
@@ -70,10 +68,6 @@ export function toggleZipOpen(s: PopupState): PopupState {
 
 export function toggleZipItem(s: PopupState, k: keyof ZipSelection): PopupState {
     return { ...s, zip: { ...s.zip, [k]: !s.zip[k] } };
-}
-
-export function toggleAdvanced(s: PopupState): PopupState {
-    return { ...s, advancedOpen: !s.advancedOpen };
 }
 
 export function toggleTrimOpen(s: PopupState): PopupState {
