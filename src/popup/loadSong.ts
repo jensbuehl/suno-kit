@@ -75,8 +75,10 @@ export async function loadSong(ref: SongRef, tokenOptionId = 'auto'): Promise<Lo
     for (const cand of candidatesToTry(candidates, selected)) {
         const res = await fetchAlignedWordsWithToken(ref.songId, cand.token);
         if (res.threw) {
+            // A network failure/timeout won't differ across tokens — stop retrying
+            // (otherwise N stalled tokens stack N timeouts).
             threw = true;
-            continue;
+            break;
         }
         lastStatus = res.status;
         if (res.data && res.data.length) {

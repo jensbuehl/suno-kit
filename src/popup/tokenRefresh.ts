@@ -6,25 +6,39 @@
 import { logger } from '../shared/logger';
 import { findSunoTabId } from './sunoTabs';
 
+// Time caps so a hung Clerk call (expired session after long inactivity) can't
+// stall the load: the injected getToken self-aborts, and the whole injection is
+// also raced against a timeout in case executeScript itself never settles.
+const PAGE_TOKEN_TIMEOUT_MS = 6000;
+const INJECT_TIMEOUT_MS = 9000;
+
 export async function mintFreshToken(): Promise<string | null> {
     const tabId = await findSunoTabId();
     if (tabId == null) return null;
     try {
-        const results = await chrome.scripting.executeScript({
+        const exec = chrome.scripting.executeScript({
             target: { tabId },
             world: 'MAIN',
-            func: async () => {
+            args: [PAGE_TOKEN_TIMEOUT_MS],
+            func: async (timeoutMs: number) => {
                 const clerk = (window as unknown as { Clerk?: { session?: { getToken?: () => Promise<string> } } })
                     .Clerk;
                 if (!clerk?.session?.getToken) return null;
                 try {
-                    return await clerk.session.getToken();
+                    return await Promise.race([
+                        clerk.session.getToken(),
+                        new Promise<null>((r) => setTimeout(() => r(null), timeoutMs))
+                    ]);
                 } catch {
                     return null;
                 }
             }
         });
-        const token = results?.[0]?.result;
+        const results = await Promise.race([
+            exec,
+            new Promise<null>((r) => setTimeout(() => r(null), INJECT_TIMEOUT_MS))
+        ]);
+        const token = Array.isArray(results) ? results[0]?.result : null;
         return typeof token === 'string' && token ? token : null;
     } catch (e) {
         logger.warn('Token mint via Suno tab failed', e);

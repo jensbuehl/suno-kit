@@ -78,11 +78,12 @@ const messages = {
     // Errors
     asset_failed: "Couldn't fetch this file",
     err_bad_link: "That's not a Suno song link.",
-    err_not_signed_in: "You're not signed in to Suno. Open suno.com and sign in.",
-    err_session_expired: 'Your Suno session expired. Reconnect to refresh it.',
+    err_not_signed_in: 'You’re not signed in to Suno. Open suno.com, sign in, then Reconnect.',
+    err_session_expired:
+        'Your Suno session expired. Open suno.com (it refreshes your session), then Reconnect.',
     err_song_inaccessible: "This song can't be accessed with your account.",
-    err_offline: "Can't reach Suno. Check your connection and try again.",
-    err_unknown: 'Something went wrong loading this song.'
+    err_offline: "Can't reach Suno. Check your connection, then Reconnect.",
+    err_unknown: 'Could not load this song. Open suno.com, then Reconnect.'
 } as const;
 
 export type MessageKey = keyof typeof messages;

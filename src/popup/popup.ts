@@ -181,12 +181,35 @@ function showInlineError(id: string, message: string): void {
 
 // --- Load flow --------------------------------------------------------------
 
+// Backstop so the popup can NEVER sit on "Fetching lyrics…" forever — if a load
+// somehow outlasts every inner timeout, fail into the (actionable) error view.
+const LOAD_TIMEOUT_MS = 25000;
+let loadSeq = 0;
+
 /** Loads a resolved song reference and routes the outcome into a view. */
 function runLoad(ref: SongRef, tokenOptionId = 'auto'): void {
     currentRef = ref;
+    const seq = ++loadSeq;
     state = setView(state, 'loading');
     render();
-    void loadSong(ref, tokenOptionId).then(applyOutcome);
+
+    const backstop = new Promise<LoadOutcome>((resolve) =>
+        setTimeout(
+            () =>
+                resolve({
+                    ok: false,
+                    error: { kind: 'unknown', detail: 'timeout' },
+                    tokenOptions,
+                    tokenSelectedId: tokenOptionId
+                }),
+            LOAD_TIMEOUT_MS
+        )
+    );
+
+    void Promise.race([loadSong(ref, tokenOptionId), backstop]).then((outcome) => {
+        // Ignore a stale result if a newer load (e.g. Reconnect) already started.
+        if (seq === loadSeq) applyOutcome(outcome);
+    });
 }
 
 /** Parses pasted/dropped input into a song ref and loads it (US1 entry point). */

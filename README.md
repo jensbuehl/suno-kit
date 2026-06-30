@@ -27,7 +27,9 @@ not just an open Suno page.
   single ZIP**.
 - **Audio preview** player in the popup.
 - **Tab-independent auth.** Uses your signed-in Suno session token, read from the browser's
-  cookie jar; if it has gone stale it is refreshed from any open Suno tab.
+  cookie jar. If it has gone stale, SunoKit tries to refresh it from an open Suno tab with a
+  live session; if it can't (no Suno tab, or that session has also lapsed) it fails fast and
+  prompts you to reconnect at suno.com.
 
 ## Install
 
@@ -66,8 +68,9 @@ SunoKit card.
 5. **Audio / Cover / Video tabs** — preview, then download.
 6. **ZIP** — pick which assets to include and download them as one archive.
 
-If the token can't be read or has expired and no Suno tab is open to refresh it, the popup
-shows a clear **Reconnect** path (open/refresh Suno and retry).
+If the token can't be read, has expired and can't be refreshed (no live Suno session), or
+Suno is unreachable, the popup fails fast and shows a clear error with **Open suno.com** and
+**Reconnect** actions — it never hangs on a loading screen.
 
 ## How it works
 

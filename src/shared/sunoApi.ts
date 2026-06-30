@@ -14,6 +14,20 @@ export interface FetchResult<T> {
     threw: boolean;
 }
 
+/** Hard cap on any single request so a stalled connection can't hang the popup
+ * forever (the bug behind an endless "Fetching lyrics…" after long inactivity). */
+const REQUEST_TIMEOUT_MS = 10000;
+
+async function fetchWithTimeout(input: string, init?: RequestInit): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+        return await fetch(input, { ...init, signal: controller.signal });
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 /**
  * Fetches time-aligned lyrics for a song using a bearer token. Surfaces the HTTP
  * status so the caller can distinguish an expired session from an inaccessible song.
@@ -23,7 +37,7 @@ export async function fetchAlignedWordsWithToken(
     bearerToken: string
 ): Promise<FetchResult<AlignedWord[]>> {
     try {
-        const response = await fetch(`${STUDIO_API_BASE}/${songId}/aligned_lyrics/v2/`, {
+        const response = await fetchWithTimeout(`${STUDIO_API_BASE}/${songId}/aligned_lyrics/v2/`, {
             headers: {
                 Authorization: `Bearer ${bearerToken}`,
                 'Content-Type': 'application/json'
@@ -47,7 +61,7 @@ export async function fetchAlignedWordsWithToken(
  */
 export async function fetchSongPageHtml(songId: string): Promise<FetchResult<string>> {
     try {
-        const response = await fetch(`https://suno.com/song/${songId}`, { credentials: 'include' });
+        const response = await fetchWithTimeout(`https://suno.com/song/${songId}`, { credentials: 'include' });
         if (!response.ok) return { data: null, status: response.status, threw: false };
         return { data: await response.text(), status: response.status, threw: false };
     } catch (e) {

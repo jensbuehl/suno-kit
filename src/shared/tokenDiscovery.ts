@@ -45,23 +45,35 @@ export function describeCandidate(candidate: TokenCandidate): string {
     return src || 'Discovered token';
 }
 
-/** Asks the background worker for cookies (including HttpOnly ones). */
+/** Asks the background worker for cookies (including HttpOnly ones). Falls back
+ * to an empty list if the worker doesn't answer in time, so it can't hang. */
 function getCookiesViaExtension(domains: string[]): Promise<chrome.cookies.Cookie[]> {
     return new Promise((resolve) => {
+        let settled = false;
+        const finish = (cookies: chrome.cookies.Cookie[]): void => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            resolve(cookies);
+        };
+        const timer = setTimeout(() => {
+            logger.warn('Cookie broker timed out');
+            finish([]);
+        }, 5000);
         try {
             chrome.runtime.sendMessage(
                 { action: 'FC_GET_SUNO_COOKIES', domains },
                 (response: GetCookiesResponse) => {
                     if (chrome.runtime.lastError || !response || !Array.isArray(response.cookies)) {
                         logger.warn('Could not read cookies via chrome.cookies', chrome.runtime.lastError);
-                        return resolve([]);
+                        return finish([]);
                     }
-                    resolve(response.cookies);
+                    finish(response.cookies);
                 }
             );
         } catch (err) {
             logger.warn('Failed requesting cookies via background', err);
-            resolve([]);
+            finish([]);
         }
     });
 }
